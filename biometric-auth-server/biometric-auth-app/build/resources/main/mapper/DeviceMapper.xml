@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.biometric.poc.mapper.DeviceMapper">
+
+  <resultMap id="DeviceInfoMap" type="com.biometric.poc.lib.model.DeviceInfo">
+    <id     property="deviceId"       column="DEVICE_ID"/>
+    <result property="userId"         column="USER_ID"/>
+    <result property="publicKeyBase64" column="PUBLIC_KEY_B64"/>
+    <result property="status"         column="STATUS"
+            typeHandler="com.biometric.poc.mapper.handler.DeviceStatusTypeHandler"/>
+    <result property="enrolledAt"     column="ENROLLED_AT"
+            typeHandler="com.biometric.poc.mapper.handler.InstantTypeHandler"/>
+    <result property="updatedAt"      column="UPDATED_AT"
+            typeHandler="com.biometric.poc.mapper.handler.InstantTypeHandler"/>
+  </resultMap>
+
+  <insert id="insert" parameterType="com.biometric.poc.lib.model.DeviceInfo">
+    INSERT INTO BIOMETRIC_DEVICE
+      (DEVICE_ID, USER_ID, PUBLIC_KEY_B64, STATUS, ENROLLED_AT, UPDATED_AT)
+    VALUES
+      (#{deviceId}, #{userId}, #{publicKeyBase64},
+       #{status, typeHandler=com.biometric.poc.mapper.handler.DeviceStatusTypeHandler},
+       #{enrolledAt, typeHandler=com.biometric.poc.mapper.handler.InstantTypeHandler},
+       #{updatedAt, typeHandler=com.biometric.poc.mapper.handler.InstantTypeHandler})
+  </insert>
+
+  <select id="selectByDeviceId" resultMap="DeviceInfoMap">
+    SELECT DEVICE_ID, USER_ID, PUBLIC_KEY_B64, STATUS, ENROLLED_AT, UPDATED_AT
+    FROM BIOMETRIC_DEVICE
+    WHERE DEVICE_ID = #{deviceId}
+  </select>
+
+  <select id="countByDeviceId" resultType="int">
+    SELECT COUNT(*) FROM BIOMETRIC_DEVICE WHERE DEVICE_ID = #{deviceId}
+  </select>
+
+  <update id="updateStatus">
+    UPDATE BIOMETRIC_DEVICE
+    SET STATUS = #{status},
+        UPDATED_AT = #{updatedAt,
+            typeHandler=com.biometric.poc.mapper.handler.InstantTypeHandler}
+    WHERE DEVICE_ID = #{deviceId}
+  </update>
+
+  <update id="updateKeyInvalidated">
+    UPDATE BIOMETRIC_DEVICE
+    SET STATUS = 'KEY_INVALIDATED',
+        PUBLIC_KEY_B64 = NULL,
+        UPDATED_AT = #{updatedAt,
+            typeHandler=com.biometric.poc.mapper.handler.InstantTypeHandler}
+    WHERE DEVICE_ID = #{deviceId}
+  </update>
+
+  <update id="updatePublicKey">
+    UPDATE BIOMETRIC_DEVICE
+    SET PUBLIC_KEY_B64 = #{publicKeyBase64},
+        UPDATED_AT = #{updatedAt,
+            typeHandler=com.biometric.poc.mapper.handler.InstantTypeHandler}
+    WHERE DEVICE_ID = #{deviceId}
+  </update>
+
+</mapper>

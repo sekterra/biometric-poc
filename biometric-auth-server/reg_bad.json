@@ -1,0 +1,6 @@
+{
+  "device_id":   "badDateDev",
+  "user_id":     "USER01",
+  "public_key":  "ZHVtbXk=",
+  "enrolled_at": "not-a-date"
+}

@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.biometric.poc.demo.biometric-demo-app-mergeDebugResources-31:/values-port/values-port.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\Tommy\\.gradle\\caches\\transforms-3\\74c0aa74c6cd0d99699e92401439d9bc\\transformed\\appcompat-1.7.0\\res\\values-port\\values-port.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "55",
+                        "endOffsets": "106"
+                    }
+                }
+            ]
+        }
+    ]
+}

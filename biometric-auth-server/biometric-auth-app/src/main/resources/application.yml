@@ -1,0 +1,45 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:biometric;MODE=Oracle;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true # H2 웹 콘솔 활성화 (http://localhost:8080/h2-console)
+      path: /h2-console
+  sql:
+    init:
+      mode: always # 서버 기동 시 schema.sql 자동 실행
+      schema-locations: classpath:schema.sql
+
+# 실서비스 전환 시 아래 주석을 해제하고 위 H2 설정을 주석 처리
+# spring:
+#   datasource:
+#     url: jdbc:oracle:thin:@{host}:{port}:{sid}
+#     driver-class-name: oracle.jdbc.OracleDriver
+#     username: {username}
+#     password: {password}
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true # snake_case → camelCase 자동 매핑
+    jdbc-type-for-null: NULL
+
+# TODO: [실서비스] jwt.secret 을 환경 변수로 치환 (저장소에 평문 금지)
+jwt:
+  secret: "biometric-poc-secret-key-minimum-32chars!!"
+  access-token-expiry-minutes: 30
+  refresh-token-expiry-days: 7
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test-flow
+  # test-flow 프로파일 활성화 시 H2 콘솔 데이터 확인용 엔드포인트 노출
+  # 실서비스 전환 전 TestFlowController.java 제거 필요

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.biometric.poc.mapper.NonceMapper">
+
+  <insert id="insert">
+    INSERT INTO BIOMETRIC_NONCE (NONCE, DEVICE_ID, USED_AT, EXPIRE_AT)
+    VALUES (
+      #{nonce}, #{deviceId},
+      #{usedAt,   typeHandler=com.biometric.poc.mapper.handler.InstantTypeHandler},
+      #{expireAt, typeHandler=com.biometric.poc.mapper.handler.InstantTypeHandler}
+    )
+  </insert>
+
+  <select id="countByNonce" resultType="int">
+    SELECT COUNT(*) FROM BIOMETRIC_NONCE WHERE NONCE = #{nonce}
+  </select>
+
+  <delete id="deleteExpired">
+    DELETE FROM BIOMETRIC_NONCE
+    WHERE EXPIRE_AT &lt; #{now,
+        typeHandler=com.biometric.poc.mapper.handler.InstantTypeHandler}
+  </delete>
+
+</mapper>

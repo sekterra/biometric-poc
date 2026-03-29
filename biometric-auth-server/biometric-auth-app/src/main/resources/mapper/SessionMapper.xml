@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.biometric.poc.mapper.SessionMapper">
+
+  <resultMap id="SessionDataMap" type="com.biometric.poc.lib.model.SessionData">
+    <id     property="sessionId"         column="SESSION_ID"/>
+    <result property="deviceId"          column="DEVICE_ID"/>
+    <result property="userId"            column="USER_ID"/>
+    <result property="serverChallengeHex" column="CHALLENGE_HEX"/>
+    <result property="clientNonce"       column="CLIENT_NONCE"/>
+    <result property="timestamp"         column="REQ_TIMESTAMP"/>
+    <result property="expireAt"          column="EXPIRE_AT"
+            typeHandler="com.biometric.poc.mapper.handler.InstantTypeHandler"/>
+    <result property="used"              column="USED_YN"
+            typeHandler="com.biometric.poc.mapper.handler.BooleanYnTypeHandler"/>
+    <result property="createdAt"         column="CREATED_AT"
+            typeHandler="com.biometric.poc.mapper.handler.InstantTypeHandler"/>
+  </resultMap>
+
+  <insert id="insert" parameterType="com.biometric.poc.lib.model.SessionData">
+    INSERT INTO BIOMETRIC_SESSION
+      (SESSION_ID, DEVICE_ID, USER_ID, CHALLENGE_HEX, CLIENT_NONCE,
+       REQ_TIMESTAMP, EXPIRE_AT, USED_YN, CREATED_AT)
+    VALUES
+      (#{sessionId}, #{deviceId}, #{userId}, #{serverChallengeHex}, #{clientNonce},
+       #{timestamp},
+       #{expireAt,   typeHandler=com.biometric.poc.mapper.handler.InstantTypeHandler},
+       #{used,       typeHandler=com.biometric.poc.mapper.handler.BooleanYnTypeHandler},
+       #{createdAt,  typeHandler=com.biometric.poc.mapper.handler.InstantTypeHandler})
+  </insert>
+
+  <select id="selectBySessionId" resultMap="SessionDataMap">
+    SELECT SESSION_ID, DEVICE_ID, USER_ID, CHALLENGE_HEX, CLIENT_NONCE,
+           REQ_TIMESTAMP, EXPIRE_AT, USED_YN, CREATED_AT
+    FROM BIOMETRIC_SESSION
+    WHERE SESSION_ID = #{sessionId}
+  </select>
+
+  <update id="markUsed">
+    UPDATE BIOMETRIC_SESSION
+    SET USED_YN = 'Y'
+    WHERE SESSION_ID = #{sessionId}
+  </update>
+
+  <delete id="deleteExpired">
+    DELETE FROM BIOMETRIC_SESSION
+    WHERE EXPIRE_AT &lt; #{now,
+        typeHandler=com.biometric.poc.mapper.handler.InstantTypeHandler}
+  </delete>
+
+</mapper>

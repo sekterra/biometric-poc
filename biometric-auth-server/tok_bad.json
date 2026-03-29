@@ -1,0 +1,8 @@
+{
+  "session_id":   "03bb060401194d1fb6cfbf509b0b436e",
+  "device_id":    "verifyDevOk_cb89102b",
+  "user_id":      "USER01",
+  "ec_signature": "dummy",
+  "client_nonce": "aabbccddeeff00112233445566778899",
+  "timestamp":    1774692490559
+}

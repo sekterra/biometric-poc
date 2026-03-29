@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MIS 생체인증 PoC 아키텍처 (ECDSA)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    background: #f4f6f9;
+    padding: 32px 24px 48px;
+    color: #1a1d23;
+    min-width: 900px;
+  }
+
+  h1 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #374151;
+    text-align: center;
+    margin-bottom: 24px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ── 상단 시스템 구성 ── */
+  .systems {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+
+  .system-box {
+    flex: 1;
+    border-radius: 16px;
+    padding: 18px 18px 14px;
+    position: relative;
+  }
+
+  .system-box.android {
+    background: #e8f8f2;
+    border: 1.5px solid #6fcfad;
+  }
+
+  .system-box.server {
+    background: #e8f0fb;
+    border: 1.5px solid #7baee8;
+  }
+
+  .system-title {
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  .system-box.android .system-title { color: #0f6e56; }
+  .system-box.server  .system-title { color: #1a56a8; }
+
+  .module-label {
+    font-size: 11px;
+    color: #6b7280;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  .lib-box {
+    border-radius: 10px;
+    padding: 10px 10px 8px;
+    margin-bottom: 10px;
+  }
+
+  .android .lib-box {
+    background: #d1f0e4;
+    border: 1px solid #9edfc6;
+  }
+
+  .server .lib-box {
+    background: #d4e6f9;
+    border: 1px solid #9dc4ef;
+  }
+
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .component {
+    border-radius: 7px;
+    padding: 7px 8px;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .android .component {
+    background: #fff;
+    border: 1px solid #b6dfd0;
+    color: #0d5c47;
+  }
+
+  .server .component {
+    background: #fff;
+    border: 1px solid #aec9ed;
+    color: #154a8a;
+  }
+
+  .component .sub {
+    display: block;
+    font-size: 9.5px;
+    font-weight: 400;
+    color: #6b7280;
+    margin-top: 1px;
+  }
+
+  /* 변경된 컴포넌트 강조 */
+  .changed {
+    position: relative;
+  }
+  .changed::after {
+    content: 'ECDSA';
+    position: absolute;
+    top: -6px;
+    right: -4px;
+    font-size: 8px;
+    font-weight: 700;
+    background: #f59e0b;
+    color: #fff;
+    border-radius: 4px;
+    padding: 1px 4px;
+    line-height: 1.4;
+  }
+
+  /* app 컴포넌트 행 */
+  .app-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 2px;
+  }
+
+  .app-component {
+    flex: 1;
+    border-radius: 7px;
+    padding: 6px 8px;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .android .app-component {
+    background: #ede9fe;
+    border: 1px solid #c4b5fd;
+    color: #4c1d95;
+  }
+
+  .server .app-component {
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    color: #7f1d1d;
+  }
+
+  /* ── HTTP 화살표 영역 ── */
+  .arrow-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    flex-shrink: 0;
+    gap: 4px;
+  }
+
+  .arrow-line {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .arrow-label {
+    font-size: 10px;
+    color: #6b7280;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .arrow-svg { overflow: visible; }
+
+  /* ── 인증 흐름 단계 ── */
+  .flow-section {
+    background: #fff;
+    border-radius: 16px;
+    border: 1.5px solid #e5e7eb;
+    padding: 18px 20px 16px;
+    margin-bottom: 20px;
+  }
+
+  .flow-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 14px;
+  }
+
+  .flow-steps {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .step {
+    border-radius: 10px;
+    padding: 9px 10px 8px;
+    min-width: 100px;
+    flex-shrink: 0;
+    text-align: center;
+  }
+
+  .step-num {
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+
+  .step-name {
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .step-sub {
+    font-size: 9.5px;
+    margin-top: 2px;
+    opacity: 0.8;
+    line-height: 1.3;
+  }
+
+  .step.gray   { background: #f1f3f5; border: 1px solid #d1d5db; color: #374151; }
+  .step.teal   { background: #d1fae5; border: 1px solid #6ee7b7; color: #064e3b; }
+  .step.amber  { background: #fef3c7; border: 1px solid #fcd34d; color: #78350f; }
+  .step.blue   { background: #dbeafe; border: 1px solid #93c5fd; color: #1e3a8a; }
+  .step.purple { background: #ede9fe; border: 1px solid #c4b5fd; color: #3b0764; }
+  .step.green  { background: #d1fae5; border: 1px solid #34d399; color: #064e3b; }
+
+  .step-arrow {
+    font-size: 16px;
+    color: #9ca3af;
+    flex-shrink: 0;
+    padding: 0 4px;
+    margin-top: -12px;
+  }
+
+  /* ── 하단 주석 영역 ── */
+  .notes {
+    display: flex;
+    gap: 16px;
+  }
+
+  .note-box {
+    flex: 1;
+    background: #fff;
+    border-radius: 12px;
+    border: 1.5px solid #e5e7eb;
+    padding: 14px 16px;
+  }
+
+  .note-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 8px;
+  }
+
+  .note-item {
+    font-size: 10.5px;
+    color: #4b5563;
+    line-height: 1.8;
+    display: flex;
+    gap: 6px;
+  }
+
+  .note-item span { color: #6b7280; }
+
+  .badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+  .badge.new    { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+  .badge.upd    { background: #dbeafe; color: #1e3a8a; border: 1px solid #93c5fd; }
+  .badge.ecdsa  { background: #fee2e2; color: #7f1d1d; border: 1px solid #fca5a5; }
+</style>
+</head>
+<body>
+
+<h1>MIS 생체인증 PoC — 시스템 아키텍처 (ECDSA 방식)</h1>
+
+<!-- ── 상단: 시스템 구성 ── -->
+<div class="systems">
+
+  <!-- Android 앱 -->
+  <div class="system-box android">
+    <div class="system-title">MIS 데모 앱 (Android)</div>
+
+    <div class="module-label">biometric-lib (AAR)</div>
+    <div class="lib-box">
+      <div class="grid2">
+        <div class="component">BiometricRegistrar<span class="sub">등록 오케스트레이터</span></div>
+        <div class="component">BiometricAuthMgr<span class="sub">인증 오케스트레이터</span></div>
+        <div class="component changed">EcKeyManager<span class="sub">secp256r1 키쌍·서명</span></div>
+        <div class="component">FailurePolicyMgr<span class="sub">실패 카운트·잠금</span></div>
+        <div class="component">AuthApiClient<span class="sub">OkHttp REST</span></div>
+        <div class="component">TokenStorage<span class="sub">EncryptedSharedPref</span></div>
+      </div>
+    </div>
+
+    <div class="module-label">demo-app</div>
+    <div class="app-row">
+      <div class="app-component">Register</div>
+      <div class="app-component">Login</div>
+      <div class="app-component">Main Screen</div>
+    </div>
+  </div>
+
+  <!-- 화살표 -->
+  <div class="arrow-col">
+    <div class="arrow-label">HTTP/REST</div>
+    <svg class="arrow-svg" width="48" height="36" viewBox="0 0 48 36">
+      <line x1="4" y1="12" x2="44" y2="12" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr)"/>
+      <line x1="44" y1="24" x2="4" y2="24" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <defs>
+        <marker id="arr"  viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto"><path d="M1 1L7 4L1 7" fill="none" stroke="#9ca3af" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></marker>
+        <marker id="arr2" viewBox="0 0 8 8" refX="1" refY="4" markerWidth="5" markerHeight="5" orient="auto"><path d="M7 1L1 4L7 7" fill="none" stroke="#9ca3af" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></marker>
+      </defs>
+    </svg>
+  </div>
+
+  <!-- 서버 -->
+  <div class="system-box server">
+    <div class="system-title">biometric-auth-server</div>
+
+    <div class="module-label">biometric-auth-lib (JAR)</div>
+    <div class="lib-box">
+      <div class="grid2">
+        <div class="component">ChallengeService<span class="sub">Challenge·세션 관리</span></div>
+        <div class="component changed">EcdsaVerifier<span class="sub">공개키로 서명 검증</span></div>
+        <div class="component">SessionStore<span class="sub">TTL 60초 세션</span></div>
+        <div class="component">NonceStore<span class="sub">재전송 방지</span></div>
+        <div class="component">DeviceRegistry<span class="sub">device↔pubkey 저장</span></div>
+        <div class="component">FailurePolicySvc<span class="sub">정책·account_lock</span></div>
+      </div>
+    </div>
+
+    <div class="module-label">biometric-auth-app</div>
+    <div class="app-row">
+      <div class="app-component">DeviceCtrl</div>
+      <div class="app-component">AuthCtrl</div>
+      <div class="app-component">PolicyCtrl</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── 인증 흐름 단계 ── -->
+<div class="flow-section">
+  <div class="flow-title">인증 흐름 단계</div>
+  <div class="flow-steps">
+
+    <div class="step gray">
+      <div class="step-num">①</div>
+      <div class="step-name">Challenge 요청</div>
+      <div class="step-sub">device_id + nonce</div>
+    </div>
+    <div class="step-arrow">›</div>
+
+    <div class="step teal">
+      <div class="step-num">②</div>
+      <div class="step-name">session 발급</div>
+      <div class="step-sub">TTL 60초</div>
+    </div>
+    <div class="step-arrow">›</div>
+
+    <div class="step amber">
+      <div class="step-num">③</div>
+      <div class="step-name">BiometricPrompt</div>
+      <div class="step-sub">안면인식 실행</div>
+    </div>
+    <div class="step-arrow">›</div>
+
+    <div class="step purple">
+      <div class="step-num">④</div>
+      <div class="step-name">ECDSA 서명</div>
+      <div class="step-sub">Keystore 개인키<br>절대 외부 유출 없음</div>
+    </div>
+    <div class="step-arrow">›</div>
+
+    <div class="step blue">
+      <div class="step-num">⑤</div>
+      <div class="step-name">Token 요청</div>
+      <div class="step-sub">4단계 서버 검증</div>
+    </div>
+    <div class="step-arrow">›</div>
+
+    <div class="step teal">
+      <div class="step-num">⑥</div>
+      <div class="step-name">JWT 발급</div>
+      <div class="step-sub">access + refresh</div>
+    </div>
+    <div class="step-arrow">›</div>
+
+    <div class="step blue">
+      <div class="step-num">⑦</div>
+      <div class="step-name">토큰 저장</div>
+      <div class="step-sub">EncryptedSharedPref</div>
+    </div>
+    <div class="step-arrow">›</div>
+
+    <div class="step green">
+      <div class="step-num">⑧</div>
+      <div class="step-name">로그인 완료</div>
+      <div class="step-sub">MIS 메인 화면</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── 하단 주석 ── -->
+<div class="notes">
+
+  <div class="note-box">
+    <div class="note-title">실패 정책 (서버 API 조회)</div>
+    <div class="note-item">
+      <span>·</span>
+      <div>ERROR_CANCELED → 실패 카운트 제외 (사용자 의도적 취소)</div>
+    </div>
+    <div class="note-item">
+      <span>·</span>
+      <div>1~2회 실패: 재시도 안내</div>
+    </div>
+    <div class="note-item">
+      <span>·</span>
+      <div>3회 이상: 30초 로컬 잠금 (서버 정책 조회)</div>
+    </div>
+    <div class="note-item">
+      <span>·</span>
+      <div>5회 이상: account_lock → ID/PW 폴백</div>
+    </div>
+  </div>
+
+  <div class="note-box">
+    <div class="note-title">서버 4단계 검증</div>
+    <div class="note-item"><span>①</span><div>session_id 유효·만료 확인</div></div>
+    <div class="note-item"><span>②</span><div>timestamp ±30초 범위 확인</div></div>
+    <div class="note-item"><span>③</span><div>client_nonce 중복 확인 (replay 방지)</div></div>
+    <div class="note-item"><span>④</span><div>ECDSA 서명 검증 — 저장된 공개키로 실제 암호학적 검증<span class="badge ecdsa">ECDSA</span></div></div>
+  </div>
+
+  <div class="note-box">
+    <div class="note-title">HMAC 대비 변경 사항</div>
+    <div class="note-item">
+      <span>·</span>
+      <div>EcKeyManager — HMAC→ECDSA 교체<span class="badge ecdsa">변경</span></div>
+    </div>
+    <div class="note-item">
+      <span>·</span>
+      <div>EcdsaVerifier — HmacVerifier 대체<span class="badge ecdsa">변경</span></div>
+    </div>
+    <div class="note-item">
+      <span>·</span>
+      <div>public_key 등록 필드 추가<span class="badge upd">수정</span></div>
+    </div>
+    <div class="note-item">
+      <span>·</span>
+      <div>PUT /api/device/update-key<span class="badge new">신규</span></div>
+    </div>
+    <div class="note-item">
+      <span>·</span>
+      <div>setValidity(10)초 — 갤럭시 탭 호환<span class="badge upd">설정</span></div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

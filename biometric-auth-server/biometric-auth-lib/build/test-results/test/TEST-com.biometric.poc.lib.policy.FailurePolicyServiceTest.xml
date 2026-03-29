@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.biometric.poc.lib.policy.FailurePolicyServiceTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-03-28T10:04:34" hostname="DESKTOP-FEPFV5M" time="0.026">
+  <properties/>
+  <testcase name="isKeyInvalidated_afterInvalidateKey_returnsTrue()" classname="com.biometric.poc.lib.policy.FailurePolicyServiceTest" time="0.021"/>
+  <testcase name="lockAccount_thenIsLocked_returnsTrue()" classname="com.biometric.poc.lib.policy.FailurePolicyServiceTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,34 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.biometric.poc.lib.biometric-lib-merged_res-20:/values-h720dp-v13/values-h720dp-v13.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\Tommy\\.gradle\\caches\\transforms-3\\465ae7475a2a9e94e0ac8f1a85c7fcaf\\transformed\\appcompat-1.2.0\\res\\values-h720dp-v13\\values-h720dp-v13.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "66",
+                        "endOffsets": "117"
+                    }
+                }
+            ]
+        },
+        {
+            "outputFile": "com.biometric.poc.lib.biometric-lib-mergeReleaseResources-18:/values-h720dp-v13/values-h720dp-v13.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\Tommy\\.gradle\\caches\\transforms-3\\465ae7475a2a9e94e0ac8f1a85c7fcaf\\transformed\\appcompat-1.2.0\\res\\values-h720dp-v13\\values-h720dp-v13.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "66",
+                        "endOffsets": "117"
+                    }
+                }
+            ]
+        }
+    ]
+}

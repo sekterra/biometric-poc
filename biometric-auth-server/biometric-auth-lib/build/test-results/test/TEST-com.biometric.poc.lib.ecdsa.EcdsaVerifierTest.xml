@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.biometric.poc.lib.ecdsa.EcdsaVerifierTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-03-28T10:04:33" hostname="DESKTOP-FEPFV5M" time="0.902">
+  <properties/>
+  <testcase name="verify_oldTimestamp_returnsTimestampOutOfRange()" classname="com.biometric.poc.lib.ecdsa.EcdsaVerifierTest" time="0.687"/>
+  <testcase name="verify_reusedNonce_returnsNonceReplay()" classname="com.biometric.poc.lib.ecdsa.EcdsaVerifierTest" time="0.021"/>
+  <testcase name="verify_nullSignature_returnsMissingSignature()" classname="com.biometric.poc.lib.ecdsa.EcdsaVerifierTest" time="0.014"/>
+  <testcase name="verify_expiredSession_returnsSessionExpired()" classname="com.biometric.poc.lib.ecdsa.EcdsaVerifierTest" time="0.013"/>
+  <testcase name="verify_invalidSignature_returnsInvalidSignature()" classname="com.biometric.poc.lib.ecdsa.EcdsaVerifierTest" time="0.11"/>
+  <testcase name="verify_validRequest_returnsSuccess()" classname="com.biometric.poc.lib.ecdsa.EcdsaVerifierTest" time="0.039"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+]]></system-err>
+</testsuite>

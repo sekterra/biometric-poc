@@ -1,0 +1,38 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.biometric.poc.demo'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.biometric.poc.demo"
+        minSdk 28
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+        buildConfigField "String", "SERVER_URL", "\"http://10.0.2.2:8080\""
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+}
+
+dependencies {
+    implementation project(':biometric-lib')
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+}
