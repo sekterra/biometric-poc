@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        생체인식 설정 화면 진입을 위한 Activity 클래스명 목록 (우선순위 순).
+        BiometricSettingsNavigator에서 순서대로 시도하며, 첫 번째 성공한 경로로 이동합니다.
+
+        TODO: [실서비스] 지원 대상 기기 확장 시 제조사별 ActivityName 추가.
+    -->
+    <string-array name="biometric_settings_activities">
+        <!-- 삼성 전용 생체인식 설정 -->
+        <item>com.samsung.android.settings.biometrics.BiometricsAndSecuritySettings</item>
+        <!-- AOSP 표준 생체인식 및 보안 설정 -->
+        <item>com.android.settings.Settings$BiometricsAndSecuritySettingsActivity</item>
+        <!-- AOSP 표준 보안 설정 (폴백) -->
+        <item>com.android.settings.Settings$SecuritySettingsActivity</item>
+    </string-array>
+</resources>

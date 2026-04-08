@@ -18,11 +18,11 @@ import java.security.GeneralSecurityException;
  */
 public class TokenStorage {
 
-    public static final String KEY_ACCESS_TOKEN = "access_token";
-    public static final String KEY_REFRESH_TOKEN = "refresh_token";
-    public static final String KEY_REGISTERED = "registered";
-    public static final String KEY_DEVICE_ID = "device_id";
-    public static final String KEY_USER_ID = "user_id";
+    private static final String KEY_ACCESS_TOKEN = "biometric.access_token";
+    private static final String KEY_REFRESH_TOKEN = "biometric.refresh_token";
+    private static final String KEY_REGISTERED = "biometric.registered";
+    private static final String KEY_DEVICE_ID = "biometric.device_id";
+    private static final String KEY_USER_ID = "biometric.user_id";
 
     private final SharedPreferences prefs;
 

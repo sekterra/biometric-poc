@@ -13,4 +13,63 @@
     <string name="main_auth_method">안면인식 로그인 완료</string>
     <string name="main_access_token_label">Access Token</string>
     <string name="main_logout">로그아웃</string>
+
+    <string name="main_entry_title">MIS 생체인증 PoC</string>
+    <string name="main_checking_status">단말기 상태를 확인하고 있습니다.</string>
+    <string name="main_lookup_device_id">단말기ID를 조회중입니다.</string>
+    <string name="main_hint_user_id">사용자 ID를 입력하세요</string>
+    <string name="main_hint_password">비밀번호를 입력하세요</string>
+    <string name="main_button_register_user_device">사용자ID 및 기기 등록</string>
+    <string name="main_button_change_user">사용자 변경</string>
+    <string name="main_button_login">로그인</string>
+
+    <string name="register_label_device_id">단말기 ID</string>
+    <string name="register_label_user_id">사용자 ID</string>
+    <string name="register_hint_user_id">사용자 ID를 입력하세요</string>
+    <string name="register_button_default">안면인식 등록 시작</string>
+
+    <string name="main_locked_message">안면인식 로그인이 잠긴 상태입니다(5회 실패).\nID/PW 로그인 후 잠금이 해제됩니다.</string>
+    <string name="main_hint_new_user_id">신규 사용자 ID를 입력하세요</string>
+    <string name="main_greeting_format">안녕하세요, %1$s님. 로그인 화면으로 이동합니다.</string>
+    <string name="main_unknown_status">알 수 없는 상태: %1$s</string>
+    <string name="main_security_alert_title">보안 알림</string>
+    <string name="main_key_invalidated_message">새로운 얼굴 등록이 감지되었습니다.\n기존 사용자 정보를 제거하고 재등록을 진행하시겠습니까?</string>
+    <string name="main_new_user_register">신규 사용자 등록</string>
+    <string name="main_must_reregister_exit">재등록을 완료해야 안면인식 로그인을 사용할 수 있습니다.\n앱을 종료합니다.</string>
+    <string name="main_unlock_success">잠금이 해제되었습니다.</string>
+    <string name="main_toast_enter_user_id">사용자 ID를 입력해주세요.</string>
+
+    <string name="face_enroll_guide_title">안면인식 등록 안내</string>
+    <string name="face_enroll_guide_message">설정 화면으로 이동합니다.\n아래 경로로 진행해주세요.\n\n[생체인식 및 보안]\n→ [생체 인식]\n→ [얼굴 인식]\n\n등록 완료 후 앱으로 돌아오시면\n자동으로 로그인 버튼이 활성화됩니다.</string>
+    <string name="face_enroll_guide_confirm">설정으로 이동</string>
+    <string name="face_enroll_guide_cancel">취소</string>
+    <string name="face_enroll_hint">안면 인식 항목을 선택해주세요.</string>
+
+    <string name="key_invalidated_title">재등록 필요</string>
+    <string name="key_invalidated_message">안면인식 정보가 변경되었거나\n보안 키가 초기화되었습니다.\n\n안면인식 로그인을 계속 사용하려면\n재등록이 필요합니다.</string>
+    <string name="key_invalidated_confirm">재등록하기</string>
+    <string name="key_invalidated_status">재등록 후 안면인식 로그인이 가능합니다.</string>
+    <string name="key_invalidated_register_button">기기 재등록</string>
+
+    <!-- 에러 메시지 -->
+    <string name="error_biometric_hw_unavailable">생체인식 기능을 사용할 수 없습니다. 잠시 후 다시 시도해주세요.</string>
+    <string name="error_session_expired">네트워크가 불안정하거나 인증 시간이 지나 로그인을 완료하지 못했습니다.\n잠시 후 다시 시도해주세요. 문제가 지속될 경우 헬프데스크로 문의하시기 바랍니다.</string>
+    <string name="error_timestamp_out_of_range">보안을 위해 기기 시간이 맞는지 확인합니다.\n설정 → 날짜 및 시간에서 자동 설정을 켜 주시고 잠시 후 다시 로그인해 주세요.\n문제가 계속되면 헬프데스크로 문의해 주세요.</string>
+    <string name="error_nonce_replay">보안 확인이 만료되었거나 중복 요청입니다.\n로그인을 처음부터 다시 시도해 주세요.</string>
+    <string name="error_invalid_signature">기기 인증 정보가 맞지 않습니다. 로그인을 다시 시도해 주세요.</string>
+    <string name="error_missing_signature">로그인 처리 중 문제가 발생했습니다.\n앱 종료 후 다시 로그인해 주시고, 반복되면 앱을 재설치하거나 고객센터로 문의해 주세요.</string>
+    <string name="error_device_not_found">등록된 기기를 찾을 수 없습니다.\n확인 버튼을 클릭하면 기기 등록 과정이 진행됩니다.\n문제가 계속되면 헬프데스크로 문의하세요.</string>
+    <string name="error_account_locked">로그인 시도가 많아 계정 보호를 위해 사용이 제한되었습니다.\nID/PW로 로그인하시면 잠금이 해제됩니다.</string>
+    <string name="unlock_success">잠금이 해제되었습니다. 안면인식으로 로그인해주세요.</string>
+    <string name="error_key_invalidated">얼굴 등 생체 정보가 변경되어 보안키를 다시 설정해야 합니다.\n확인 버튼을 누르면 키를 다시 설정합니다.</string>
+    <string name="error_key_not_found">보안키를 찾을 수 없습니다. 잠시 후 다시 시도해주세요.\n문제가 지속되면 헬프데스크로 문의하세요.</string>
+    <string name="error_already_registered">이 기기는 이미 인증서버에 등록되어 있습니다.\n확인 버튼 클릭시 자동으로 안면인식 절차가 진행됩니다.</string>
+    <string name="error_network">네트워크 연결을 확인 후 다시 시도해주세요.\n문제가 지속되면 헬프데스크로 문의하세요.</string>
+    <string name="error_unknown">알 수 없는 오류가 발생했습니다.\n앱을 재시작하거나 헬프데스크로 문의해주세요.</string>
+    <string name="error_session_retry">인증을 재시도하고 있습니다. (%1$d/%2$d)</string>
+    <string name="contact_helpdesk">문제가 지속되면 헬프데스크로 문의해주세요.</string>
+    <string name="key_renewal_in_progress">보안키를 재설정하고 있습니다. 잠시 후 안면인식을 다시 진행해주세요.</string>
+    <string name="user_change_dialog_title">담당자 변경</string>
+    <string name="user_change_dialog_message">이 기기에 저장된 로그인·인증 정보가 삭제됩니다.\n계속하시겠습니까?</string>
+    <string name="user_change_completed">삭제가 완료되었습니다. 신규 등록 화면으로 이동합니다.</string>
 </resources>

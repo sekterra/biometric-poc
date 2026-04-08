@@ -25,6 +25,7 @@
     <uses-permission android:name="com.biometric.poc.demo.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
 
     <application
+        android:name="com.biometric.poc.demo.BiometricApplication"
         android:allowBackup="true"
         android:appComponentFactory="androidx.core.app.CoreComponentFactory"
         android:debuggable="true"
@@ -34,7 +35,7 @@
         android:theme="@style/Theme.BiometricDemo"
         android:usesCleartextTraffic="true" >
         <activity
-            android:name="com.biometric.poc.demo.RegisterActivity"
+            android:name="com.biometric.poc.demo.MainActivity"
             android:exported="true" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -42,6 +43,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name="com.biometric.poc.demo.RegisterActivity"
+            android:exported="false" />
         <activity
             android:name="com.biometric.poc.demo.LoginActivity"
             android:exported="false" />

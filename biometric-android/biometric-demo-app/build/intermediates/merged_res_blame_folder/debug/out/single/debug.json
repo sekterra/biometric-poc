@@ -1,18 +1,26 @@
 [
     {
-        "merged": "com.biometric.poc.demo.biometric-demo-app-merged_res-33:/layout_activity_login.xml.flat",
-        "source": "com.biometric.poc.demo.biometric-demo-app-main-35:/layout/activity_login.xml"
+        "merged": "C:\\Users\\신창호부장\\.gradle\\daemon\\8.4\\com.biometric.poc.demo.biometric-demo-app-merged_res-33:\\layout_activity_main.xml.flat",
+        "source": "C:\\Users\\신창호부장\\.gradle\\daemon\\8.4\\com.biometric.poc.demo.biometric-demo-app-main-35:\\layout\\activity_main.xml"
     },
     {
-        "merged": "com.biometric.poc.demo.biometric-demo-app-merged_res-33:/layout_activity_main_after_login.xml.flat",
-        "source": "com.biometric.poc.demo.biometric-demo-app-main-35:/layout/activity_main_after_login.xml"
+        "merged": "C:\\Users\\신창호부장\\.gradle\\daemon\\8.4\\com.biometric.poc.demo.biometric-demo-app-merged_res-33:\\layout_activity_register.xml.flat",
+        "source": "C:\\Users\\신창호부장\\.gradle\\daemon\\8.4\\com.biometric.poc.demo.biometric-demo-app-main-35:\\layout\\activity_register.xml"
     },
     {
-        "merged": "com.biometric.poc.demo.biometric-demo-app-merged_res-33:/layout_activity_register.xml.flat",
-        "source": "com.biometric.poc.demo.biometric-demo-app-main-35:/layout/activity_register.xml"
+        "merged": "C:\\Users\\신창호부장\\.gradle\\daemon\\8.4\\com.biometric.poc.demo.biometric-demo-app-merged_res-33:\\layout_activity_login.xml.flat",
+        "source": "C:\\Users\\신창호부장\\.gradle\\daemon\\8.4\\com.biometric.poc.demo.biometric-demo-app-main-35:\\layout\\activity_login.xml"
     },
     {
         "merged": "com.biometric.poc.demo.biometric-demo-app-merged_res-33:/xml_network_security_config.xml.flat",
         "source": "com.biometric.poc.demo.biometric-demo-app-main-35:/xml/network_security_config.xml"
+    },
+    {
+        "merged": "C:\\Users\\신창호부장\\.gradle\\daemon\\8.4\\com.biometric.poc.demo.biometric-demo-app-merged_res-33:\\layout_activity_main_after_login.xml.flat",
+        "source": "C:\\Users\\신창호부장\\.gradle\\daemon\\8.4\\com.biometric.poc.demo.biometric-demo-app-main-35:\\layout\\activity_main_after_login.xml"
+    },
+    {
+        "merged": "C:\\Users\\신창호부장\\.gradle\\daemon\\8.4\\com.biometric.poc.demo.biometric-demo-app-merged_res-33:\\xml_network_security_config.xml.flat",
+        "source": "C:\\Users\\신창호부장\\.gradle\\daemon\\8.4\\com.biometric.poc.demo.biometric-demo-app-main-35:\\xml\\network_security_config.xml"
     }
 ]

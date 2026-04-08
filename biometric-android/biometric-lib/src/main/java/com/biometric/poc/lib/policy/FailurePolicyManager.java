@@ -8,27 +8,41 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 로컬 실패·잠금 카운트. 서버 정책은 {@link #loadPolicyIfAbsent} 로 캐시(최초 1회 조회).
+ * 로컬 실패·잠금 카운트. 서버 정책은 {@link #loadPolicyIfAbsent} 로 캐시({@link #POLICY_CACHE_TTL_MS} 주기).
  *
- * <p>TODO: [실서비스] 정책 TTL·강제 갱신(푸시)·오프라인 시 기본값 전략을 정의할 것.
+ * <p>TODO: [실서비스] 정책 강제 갱신(푸시)·오프라인 시 기본값 전략을 정의할 것.
  */
 public class FailurePolicyManager {
+
+    /**
+     * 서버 정책 캐시 유효 시간 (5분).
+     * TODO: [실서비스] 앱 운영 환경에 맞게 조정.
+     */
+    private static final long POLICY_CACHE_TTL_MS = 5 * 60 * 1000L;
 
     private final AtomicInteger failureCount = new AtomicInteger(0);
     private final AtomicLong lockoutStartTime = new AtomicLong(0);
     private FailurePolicyConfig policy;
+    /** 정책을 마지막으로 서버에서 조회한 시각 (epoch ms). */
+    private long policyFetchedAt = 0L;
 
-    /** 서버에서 정책을 가져오되, 이미 캐시되어 있으면 생략. 계정 잠금 등으로 무효화 시 {@link #invalidatePolicy}. */
+    /**
+     * 서버에서 정책을 가져오되, 캐시가 유효하면 생략.
+     * 캐시 유효 시간({@link #POLICY_CACHE_TTL_MS}) 초과 또는 {@link #invalidatePolicy} 호출 후엔 갱신.
+     */
     public synchronized void loadPolicyIfAbsent(AuthApiClient client, String deviceId) throws IOException {
-        if (policy != null) {
+        long now = System.currentTimeMillis();
+        if (policy != null && (now - policyFetchedAt) < POLICY_CACHE_TTL_MS) {
             return;
         }
         policy = client.getFailurePolicy(deviceId);
+        policyFetchedAt = now;
     }
 
-    /** 계정 잠금·정책 변경 후 다음 로그인에서 서버 정책을 다시 받기 위해 캐시 제거. */
+    /** 계정 잠금·정책 변경 후 다음 로그인에서 서버 정책을 즉시 갱신하기 위해 캐시 제거. */
     public synchronized void invalidatePolicy() {
         policy = null;
+        policyFetchedAt = 0L;
     }
 
     public int recordFailure() {

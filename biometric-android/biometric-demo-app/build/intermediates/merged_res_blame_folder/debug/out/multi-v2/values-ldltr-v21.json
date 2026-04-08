@@ -4,7 +4,7 @@
             "outputFile": "com.biometric.poc.demo.biometric-demo-app-mergeDebugResources-31:/values-ldltr-v21/values-ldltr-v21.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\Tommy\\.gradle\\caches\\transforms-3\\74c0aa74c6cd0d99699e92401439d9bc\\transformed\\appcompat-1.7.0\\res\\values-ldltr-v21\\values-ldltr-v21.xml",
+                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\74c0aa74c6cd0d99699e92401439d9bc\\transformed\\appcompat-1.7.0\\res\\values-ldltr-v21\\values-ldltr-v21.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",

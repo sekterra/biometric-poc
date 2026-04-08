@@ -7,6 +7,8 @@ import android.os.Looper;
 import com.biometric.poc.lib.network.AuthApiClient;
 import com.biometric.poc.lib.storage.TokenStorage;
 
+import java.util.concurrent.ExecutorService;
+
 public class KeyInvalidationHandler {
 
     @SuppressWarnings("unused")
@@ -14,6 +16,7 @@ public class KeyInvalidationHandler {
     private final EcKeyManager ecKeyManager;
     private final TokenStorage tokenStorage;
     private final AuthApiClient authApiClient;
+    private final ExecutorService ioExecutor;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -21,11 +24,13 @@ public class KeyInvalidationHandler {
             Context context,
             EcKeyManager ecKeyManager,
             TokenStorage tokenStorage,
-            AuthApiClient authApiClient) {
+            AuthApiClient authApiClient,
+            ExecutorService ioExecutor) {
         this.context = context.getApplicationContext();
         this.ecKeyManager = ecKeyManager;
         this.tokenStorage = tokenStorage;
         this.authApiClient = authApiClient;
+        this.ioExecutor = ioExecutor;
     }
 
     public void handleInvalidation(String deviceId, KeyInvalidationCallback callback) {
@@ -43,24 +48,19 @@ public class KeyInvalidationHandler {
             return;
         }
 
-        new Thread(
-                        () -> {
-                            try {
-                                if (!authApiClient.updateKeyStatus(deviceId)) {
-                                    runOnUiThread(
-                                            () ->
-                                                    callback.onError(
-                                                            "updateKeyStatus failed (device not found)"));
-                                    return;
-                                }
-                                runOnUiThread(callback::onInvalidated);
-                            } catch (Exception e) {
-                                String msg = errorMessage(e);
-                                runOnUiThread(() -> callback.onError(msg));
-                            }
-                        },
-                "KeyInvalidation-Api")
-                .start();
+        ioExecutor.submit(() -> {
+            try {
+                if (!authApiClient.updateKeyStatus(deviceId)) {
+                    runOnUiThread(
+                            () -> callback.onError("updateKeyStatus failed (device not found)"));
+                    return;
+                }
+                runOnUiThread(callback::onInvalidated);
+            } catch (Exception e) {
+                String msg = errorMessage(e);
+                runOnUiThread(() -> callback.onError(msg));
+            }
+        });
     }
 
     private void runOnUiThread(Runnable action) {

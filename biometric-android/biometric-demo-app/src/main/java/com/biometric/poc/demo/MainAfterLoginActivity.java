@@ -8,6 +8,7 @@ import android.widget.TextView;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.biometric.poc.lib.BiometricLibConstants;
 import com.biometric.poc.lib.storage.TokenStorage;
 import com.google.android.material.appbar.MaterialToolbar;
 
@@ -27,7 +28,7 @@ public class MainAfterLoginActivity extends AppCompatActivity {
         Intent intent = getIntent();
         String userId = intent.getStringExtra("user_id");
         String accessToken = intent.getStringExtra("access_token");
-        int expiresIn = intent.getIntExtra("expires_in", 1800);
+        int expiresIn = intent.getIntExtra("expires_in", BiometricLibConstants.TOKEN_EXPIRES_IN_DEFAULT_SEC);
 
         if (userId == null || accessToken == null) {
             try {
@@ -54,7 +55,7 @@ public class MainAfterLoginActivity extends AppCompatActivity {
             tokenPreview = "-";
         } else {
             tokenPreview =
-                    accessToken.substring(0, Math.min(20, accessToken.length())) + "...";
+                    accessToken.substring(0, Math.min(BiometricLibConstants.TOKEN_PREVIEW_MAX_CHARS, accessToken.length())) + "...";
         }
         textTokenPreview.setText(tokenPreview);
 

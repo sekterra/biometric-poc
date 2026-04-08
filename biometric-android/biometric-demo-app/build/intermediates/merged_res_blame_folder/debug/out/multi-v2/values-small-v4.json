@@ -4,7 +4,7 @@
             "outputFile": "com.biometric.poc.demo.biometric-demo-app-mergeDebugResources-31:/values-small-v4/values-small-v4.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\Tommy\\.gradle\\caches\\transforms-3\\3e57dcd8b556ed36db83311191f6b3fb\\transformed\\material-1.12.0\\res\\values-small-v4\\values-small-v4.xml",
+                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\3e57dcd8b556ed36db83311191f6b3fb\\transformed\\material-1.12.0\\res\\values-small-v4\\values-small-v4.xml",
                     "from": {
                         "startLines": "2,3,4,5",
                         "startColumns": "4,4,4,4",
