@@ -104,6 +104,10 @@
         "source": "com.biometric.poc.lib.biometric-lib-appcompat-1.2.0-10:/layout/abc_list_menu_item_icon.xml"
     },
     {
+        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-20:/layout/abc_screen_toolbar.xml",
+        "source": "com.biometric.poc.lib.biometric-lib-appcompat-1.2.0-10:/layout/abc_screen_toolbar.xml"
+    },
+    {
         "merged": "com.biometric.poc.lib.biometric-lib-merged_res-20:/layout/abc_search_view.xml",
         "source": "com.biometric.poc.lib.biometric-lib-appcompat-1.2.0-10:/layout/abc_search_view.xml"
     },

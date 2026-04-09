@@ -7,7 +7,9 @@ android {
     compileSdk 34
 
     defaultConfig {
-        minSdk 28
+        minSdk 23
+        // A2(운영 MIS 앱) minSdk 23 호환을 위해 변경
+        // 런타임에서 API 28 미만 기기 처리는 코드에서 수행
         targetSdk 34
     }
 

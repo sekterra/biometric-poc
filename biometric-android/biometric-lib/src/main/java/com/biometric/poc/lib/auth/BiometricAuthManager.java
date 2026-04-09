@@ -1,6 +1,7 @@
 package com.biometric.poc.lib.auth;
 
 import android.content.Context;
+import android.os.Build;
 import android.security.keystore.KeyPermanentlyInvalidatedException;
 import android.util.Log;
 
@@ -94,6 +95,16 @@ public class BiometricAuthManager {
     }
 
     public void authenticate(FragmentActivity activity, AuthCallback callback) {
+        // API 28(Android 9.0) 미만 기기 생체인증 미지원 처리
+        // A2 minSdk 23 대응 — 런타임 체크
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            Log.w(TAG, "API 레벨 " + Build.VERSION.SDK_INT
+                    + " → 생체인증 미지원 (API 28 이상 필요)");
+            activity.runOnUiThread(() ->
+                    callback.onError(ErrorCode.BIOMETRIC_HW_UNAVAILABLE));
+            return;
+        }
+
         if (!tokenStorage.isRegistered()) {
             activity.runOnUiThread(callback::onNotRegistered);
             return;

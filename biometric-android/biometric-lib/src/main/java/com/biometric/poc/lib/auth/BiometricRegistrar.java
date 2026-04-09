@@ -1,6 +1,7 @@
 package com.biometric.poc.lib.auth;
 
 import android.content.Context;
+import android.os.Build;
 import android.util.Log;
 
 import androidx.biometric.BiometricManager;
@@ -51,6 +52,16 @@ public class BiometricRegistrar {
             String deviceId,
             String userId,
             RegisterCallback callback) {
+        // API 28(Android 9.0) 미만 기기 생체인증 미지원 처리
+        // A2 minSdk 23 대응 — 런타임 체크
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            Log.w(TAG, "API 레벨 " + Build.VERSION.SDK_INT
+                    + " → 생체인증 미지원 (API 28 이상 필요)");
+            activity.runOnUiThread(() ->
+                    callback.onError(ErrorCode.BIOMETRIC_HW_UNAVAILABLE));
+            return;
+        }
+
         if (deviceId == null || deviceId.trim().isEmpty()) {
             activity.runOnUiThread(() -> callback.onError(ErrorCode.UNKNOWN_ERROR));
             return;
