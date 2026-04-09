@@ -54,5 +54,5 @@ public enum ErrorCode {
     UNKNOWN_ERROR
     // 분류되지 않은 기타 오류
 
-//    .ETC_ERROR
+    ,ETC_ERROR
 }
