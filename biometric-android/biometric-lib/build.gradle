@@ -24,5 +24,8 @@ dependencies {
     implementation 'androidx.biometric:biometric:1.1.0'
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
-    implementation 'com.google.code.gson:gson:2.10.1'
+    compileOnly 'com.google.code.gson:gson:2.2.4'
+    // A2(운영 MIS 앱)의 gson 2.2.4 버전 사용
+    // AAR에 gson을 번들링하지 않음
+    // 호스트 앱(A2)의 gson을 그대로 사용
 }
