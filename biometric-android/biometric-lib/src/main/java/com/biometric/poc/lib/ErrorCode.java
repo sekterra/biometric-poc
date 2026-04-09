@@ -1,5 +1,5 @@
 package com.biometric.poc.lib;
-
+//
 public enum ErrorCode {
 
     // ── 생체인증 관련 ──────────────────────────

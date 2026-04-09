@@ -29,3 +29,15 @@ dependencies {
     // AAR에 gson을 번들링하지 않음
     // 호스트 앱(A2)의 gson을 그대로 사용
 }
+
+// AAR 빌드 후 releases/ 폴더에 자동 복사 — Git 커밋 대상
+afterEvaluate {
+    task copyAarToReleases(type: Copy, dependsOn: assembleRelease) {
+        from "$buildDir/outputs/aar/biometric-lib-release.aar"
+        into "${rootProject.projectDir}/releases"
+        rename { 'biometric-lib-release.aar' }
+        doLast {
+            println "AAR 복사 완료 → ${rootProject.projectDir}/releases/biometric-lib-release.aar"
+        }
+    }
+}
