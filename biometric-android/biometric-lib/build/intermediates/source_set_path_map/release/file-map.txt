@@ -4,9 +4,9 @@ com.biometric.poc.lib.biometric-lib-lifecycle-livedata-core-2.6.1-2 C:\Users\신
 com.biometric.poc.lib.biometric-lib-startup-runtime-1.1.1-3 C:\Users\신창호부장\.gradle\caches\transforms-3\16f46285e260867b48cfc4acfaf6f5a8\transformed\startup-runtime-1.1.1\res
 com.biometric.poc.lib.biometric-lib-fragment-1.6.2-4 C:\Users\신창호부장\.gradle\caches\transforms-3\17fb37b4516608eb01680cd2a862bcd1\transformed\fragment-1.6.2\res
 com.biometric.poc.lib.biometric-lib-activity-1.7.2-5 C:\Users\신창호부장\.gradle\caches\transforms-3\205dbac6de4a1a72f4eb45b04537a57b\transformed\activity-1.7.2\res
-com.biometric.poc.lib.biometric-lib-annotation-experimental-1.1.0-6 C:\Users\신창호부장\.gradle\caches\transforms-3\35a1ee6ea9fc85856b32314be259f592\transformed\annotation-experimental-1.1.0\res
-com.biometric.poc.lib.biometric-lib-profileinstaller-1.3.0-7 C:\Users\신창호부장\.gradle\caches\transforms-3\3ccd445729405f568cd28f8a324d0091\transformed\profileinstaller-1.3.0\res
-com.biometric.poc.lib.biometric-lib-security-crypto-1.1.0-alpha06-8 C:\Users\신창호부장\.gradle\caches\transforms-3\3e8f548a48632ebb2ce80598cc415bb6\transformed\security-crypto-1.1.0-alpha06\res
+com.biometric.poc.lib.biometric-lib-security-crypto-1.1.0-6 C:\Users\신창호부장\.gradle\caches\transforms-3\255fcc1196d7099c8142ee69388876bb\transformed\security-crypto-1.1.0\res
+com.biometric.poc.lib.biometric-lib-annotation-experimental-1.1.0-7 C:\Users\신창호부장\.gradle\caches\transforms-3\35a1ee6ea9fc85856b32314be259f592\transformed\annotation-experimental-1.1.0\res
+com.biometric.poc.lib.biometric-lib-profileinstaller-1.3.0-8 C:\Users\신창호부장\.gradle\caches\transforms-3\3ccd445729405f568cd28f8a324d0091\transformed\profileinstaller-1.3.0\res
 com.biometric.poc.lib.biometric-lib-core-1.8.0-9 C:\Users\신창호부장\.gradle\caches\transforms-3\45e046da69bf187f7765cc182042e3e8\transformed\core-1.8.0\res
 com.biometric.poc.lib.biometric-lib-appcompat-1.2.0-10 C:\Users\신창호부장\.gradle\caches\transforms-3\465ae7475a2a9e94e0ac8f1a85c7fcaf\transformed\appcompat-1.2.0\res
 com.biometric.poc.lib.biometric-lib-lifecycle-livedata-2.6.1-11 C:\Users\신창호부장\.gradle\caches\transforms-3\6840225e4d6337057c5406a5126237d8\transformed\lifecycle-livedata-2.6.1\res
