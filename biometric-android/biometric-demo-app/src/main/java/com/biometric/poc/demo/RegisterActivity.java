@@ -14,11 +14,11 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.biometric.poc.demo.util.BiometricSettingsNavigator;
-import com.biometric.poc.lib.BiometricLibConstants;
-import com.biometric.poc.lib.ErrorCode;
-import com.biometric.poc.lib.auth.BiometricRegistrar;
-import com.biometric.poc.lib.crypto.EcKeyManager;
-import com.biometric.poc.lib.storage.TokenStorage;
+import com.skcc.biometric.lib.BiometricLibConstants;
+import com.skcc.biometric.lib.ErrorCode;
+import com.skcc.biometric.lib.auth.BiometricRegistrar;
+import com.skcc.biometric.lib.crypto.EcKeyManager;
+import com.skcc.biometric.lib.storage.TokenStorage;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;

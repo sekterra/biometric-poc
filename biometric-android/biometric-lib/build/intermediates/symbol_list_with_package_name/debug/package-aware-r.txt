@@ -1,1 +1,1 @@
-com.biometric.poc.lib
+com.skcc.biometric.lib

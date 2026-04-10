@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace 'com.biometric.poc.lib'
+    namespace 'com.skcc.biometric.lib'
     // A2 최고 compileSdk(29)에 맞춤 — appcompat-resources:1.7.0 등 API 34 요구 의존성 제거
     compileSdk 29
 

@@ -1,6 +1,6 @@
 [
     {
-        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-12:/color-v26/biometric_error_color.xml",
-        "source": "com.biometric.poc.lib.biometric-lib-biometric-1.1.0-0:/color-v26/biometric_error_color.xml"
+        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color-v26/biometric_error_color.xml",
+        "source": "com.skcc.biometric.lib.biometric-lib-biometric-1.1.0-0:/color-v26/biometric_error_color.xml"
     }
 ]

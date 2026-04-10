@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.biometric.poc.lib.biometric-lib-merged_res-12:/values-kk/values-kk.xml",
+            "outputFile": "com.skcc.biometric.lib.biometric-lib-mergeReleaseResources-10:/values-kk/values-kk.xml",
             "map": [
                 {
                     "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\465ae7475a2a9e94e0ac8f1a85c7fcaf\\transformed\\appcompat-1.2.0\\res\\values-kk\\values-kk.xml",
@@ -57,7 +57,7 @@
             ]
         },
         {
-            "outputFile": "com.biometric.poc.lib.biometric-lib-mergeReleaseResources-10:/values-kk/values-kk.xml",
+            "outputFile": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/values-kk/values-kk.xml",
             "map": [
                 {
                     "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\465ae7475a2a9e94e0ac8f1a85c7fcaf\\transformed\\appcompat-1.2.0\\res\\values-kk\\values-kk.xml",

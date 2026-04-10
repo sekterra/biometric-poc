@@ -15,12 +15,12 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.biometric.poc.lib.BiometricLibConstants;
-import com.biometric.poc.lib.ErrorCode;
-import com.biometric.poc.lib.auth.UserChangeHandler;
-import com.biometric.poc.lib.network.AuthApiClient.DeviceStatusResponse;
-import com.biometric.poc.lib.network.DeviceNotFoundException;
-import com.biometric.poc.lib.storage.TokenStorage;
+import com.skcc.biometric.lib.BiometricLibConstants;
+import com.skcc.biometric.lib.ErrorCode;
+import com.skcc.biometric.lib.auth.UserChangeHandler;
+import com.skcc.biometric.lib.network.AuthApiClient.DeviceStatusResponse;
+import com.skcc.biometric.lib.network.DeviceNotFoundException;
+import com.skcc.biometric.lib.storage.TokenStorage;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;

@@ -10,11 +10,11 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
 
-import com.biometric.poc.lib.auth.BiometricAuthManager;
-import com.biometric.poc.lib.auth.UserChangeHandler;
-import com.biometric.poc.lib.crypto.EcKeyManager;
-import com.biometric.poc.lib.policy.FailurePolicyManager;
-import com.biometric.poc.lib.storage.TokenStorage;
+import com.skcc.biometric.lib.auth.BiometricAuthManager;
+import com.skcc.biometric.lib.auth.UserChangeHandler;
+import com.skcc.biometric.lib.crypto.EcKeyManager;
+import com.skcc.biometric.lib.policy.FailurePolicyManager;
+import com.skcc.biometric.lib.storage.TokenStorage;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;

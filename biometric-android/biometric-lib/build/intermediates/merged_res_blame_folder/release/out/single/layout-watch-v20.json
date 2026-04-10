@@ -1,10 +1,10 @@
 [
     {
-        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-12:/layout-watch-v20/abc_alert_dialog_title_material.xml",
-        "source": "com.biometric.poc.lib.biometric-lib-appcompat-1.2.0-3:/layout-watch-v20/abc_alert_dialog_title_material.xml"
+        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/layout-watch-v20/abc_alert_dialog_title_material.xml",
+        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/layout-watch-v20/abc_alert_dialog_title_material.xml"
     },
     {
-        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-12:/layout-watch-v20/abc_alert_dialog_button_bar_material.xml",
-        "source": "com.biometric.poc.lib.biometric-lib-appcompat-1.2.0-3:/layout-watch-v20/abc_alert_dialog_button_bar_material.xml"
+        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/layout-watch-v20/abc_alert_dialog_button_bar_material.xml",
+        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/layout-watch-v20/abc_alert_dialog_button_bar_material.xml"
     }
 ]

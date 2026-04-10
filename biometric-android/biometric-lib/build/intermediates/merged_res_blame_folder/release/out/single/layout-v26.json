@@ -1,6 +1,6 @@
 [
     {
-        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-12:/layout-v26/abc_screen_toolbar.xml",
-        "source": "com.biometric.poc.lib.biometric-lib-appcompat-1.2.0-3:/layout-v26/abc_screen_toolbar.xml"
+        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/layout-v26/abc_screen_toolbar.xml",
+        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/layout-v26/abc_screen_toolbar.xml"
     }
 ]

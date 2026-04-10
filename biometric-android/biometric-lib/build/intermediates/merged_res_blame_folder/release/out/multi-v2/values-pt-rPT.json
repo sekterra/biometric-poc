@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.biometric.poc.lib.biometric-lib-mergeReleaseResources-10:/values-pt-rPT/values-pt-rPT.xml",
+            "outputFile": "com.skcc.biometric.lib.biometric-lib-mergeReleaseResources-10:/values-pt-rPT/values-pt-rPT.xml",
             "map": [
                 {
                     "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\0bd5c26df99afc1a54b8d856a81bf6b4\\transformed\\biometric-1.1.0\\res\\values-pt-rPT\\values-pt-rPT.xml",
@@ -57,7 +57,7 @@
             ]
         },
         {
-            "outputFile": "com.biometric.poc.lib.biometric-lib-merged_res-12:/values-pt-rPT/values-pt-rPT.xml",
+            "outputFile": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/values-pt-rPT/values-pt-rPT.xml",
             "map": [
                 {
                     "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\0bd5c26df99afc1a54b8d856a81bf6b4\\transformed\\biometric-1.1.0\\res\\values-pt-rPT\\values-pt-rPT.xml",

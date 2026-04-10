@@ -1,26 +1,26 @@
 [
     {
-        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-12:/drawable-v21/abc_btn_colored_material.xml",
-        "source": "com.biometric.poc.lib.biometric-lib-appcompat-1.2.0-3:/drawable-v21/abc_btn_colored_material.xml"
+        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/drawable-v21/abc_btn_colored_material.xml",
+        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/drawable-v21/abc_btn_colored_material.xml"
     },
     {
-        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-12:/drawable-v21/abc_edit_text_material.xml",
-        "source": "com.biometric.poc.lib.biometric-lib-appcompat-1.2.0-3:/drawable-v21/abc_edit_text_material.xml"
+        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/drawable-v21/abc_dialog_material_background.xml",
+        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/drawable-v21/abc_dialog_material_background.xml"
     },
     {
-        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-12:/drawable-v21/abc_dialog_material_background.xml",
-        "source": "com.biometric.poc.lib.biometric-lib-appcompat-1.2.0-3:/drawable-v21/abc_dialog_material_background.xml"
+        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/drawable-v21/abc_edit_text_material.xml",
+        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/drawable-v21/abc_edit_text_material.xml"
     },
     {
-        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-12:/drawable-v21/abc_action_bar_item_background_material.xml",
-        "source": "com.biometric.poc.lib.biometric-lib-appcompat-1.2.0-3:/drawable-v21/abc_action_bar_item_background_material.xml"
+        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/drawable-v21/notification_action_background.xml",
+        "source": "com.skcc.biometric.lib.biometric-lib-core-1.3.2-5:/drawable-v21/notification_action_background.xml"
     },
     {
-        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-12:/drawable-v21/abc_list_divider_material.xml",
-        "source": "com.biometric.poc.lib.biometric-lib-appcompat-1.2.0-3:/drawable-v21/abc_list_divider_material.xml"
+        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/drawable-v21/abc_list_divider_material.xml",
+        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/drawable-v21/abc_list_divider_material.xml"
     },
     {
-        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-12:/drawable-v21/notification_action_background.xml",
-        "source": "com.biometric.poc.lib.biometric-lib-core-1.3.2-5:/drawable-v21/notification_action_background.xml"
+        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/drawable-v21/abc_action_bar_item_background_material.xml",
+        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/drawable-v21/abc_action_bar_item_background_material.xml"
     }
 ]

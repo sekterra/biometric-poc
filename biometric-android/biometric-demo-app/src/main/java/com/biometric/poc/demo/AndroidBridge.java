@@ -16,12 +16,12 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.biometric.poc.demo.util.BiometricSettingsNavigator;
-import com.biometric.poc.lib.BiometricLibConstants;
-import com.biometric.poc.lib.ErrorCode;
-import com.biometric.poc.lib.auth.BiometricAuthManager;
-import com.biometric.poc.lib.auth.UserChangeHandler;
-import com.biometric.poc.lib.network.AuthApiClient;
-import com.biometric.poc.lib.storage.TokenStorage;
+import com.skcc.biometric.lib.BiometricLibConstants;
+import com.skcc.biometric.lib.ErrorCode;
+import com.skcc.biometric.lib.auth.BiometricAuthManager;
+import com.skcc.biometric.lib.auth.UserChangeHandler;
+import com.skcc.biometric.lib.network.AuthApiClient;
+import com.skcc.biometric.lib.storage.TokenStorage;
 
 /**
  * WebView ↔ Native 통신 브릿지.

@@ -4,7 +4,7 @@
     "type": "AAPT_FRIENDLY_MERGED_MANIFESTS",
     "kind": "Directory"
   },
-  "applicationId": "com.biometric.poc.lib",
+  "applicationId": "com.skcc.biometric.lib",
   "variantName": "debug",
   "elements": [
     {

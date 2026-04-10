@@ -3,8 +3,8 @@ package com.biometric.poc.demo;
 import android.app.Application;
 import android.util.Log;
 
-import com.biometric.poc.lib.crypto.EcKeyManager;
-import com.biometric.poc.lib.network.AuthApiClient;
+import com.skcc.biometric.lib.crypto.EcKeyManager;
+import com.skcc.biometric.lib.network.AuthApiClient;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
