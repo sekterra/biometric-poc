@@ -1,0 +1,162 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.biometric.poc.demo"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="28"
+9        android:targetSdkVersion="34" />
+10
+11    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+11-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:4:5-72
+11-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:4:22-69
+12    <uses-permission android:name="android.permission.INTERNET" />
+12-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:5:5-67
+12-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:5:22-64
+13
+14    <uses-feature
+14-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:7:5-9:36
+15        android:name="android.hardware.biometrics.face"
+15-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:8:9-56
+16        android:required="false" />
+16-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:9:9-33
+17
+18    <!-- suppress DeprecatedClassUsageInspection -->
+19    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+19-->[androidx.biometric:biometric:1.1.0] C:\Users\신창호부장\.gradle\caches\transforms-3\0bd5c26df99afc1a54b8d856a81bf6b4\transformed\biometric-1.1.0\AndroidManifest.xml:27:5-74
+19-->[androidx.biometric:biometric:1.1.0] C:\Users\신창호부장\.gradle\caches\transforms-3\0bd5c26df99afc1a54b8d856a81bf6b4\transformed\biometric-1.1.0\AndroidManifest.xml:27:22-71
+20
+21    <permission
+21-->[androidx.core:core:1.13.0] C:\Users\신창호부장\.gradle\caches\transforms-3\c36f7d1c18709e2cc31a018daadbb18d\transformed\core-1.13.0\AndroidManifest.xml:22:5-24:47
+22        android:name="com.biometric.poc.demo.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+22-->[androidx.core:core:1.13.0] C:\Users\신창호부장\.gradle\caches\transforms-3\c36f7d1c18709e2cc31a018daadbb18d\transformed\core-1.13.0\AndroidManifest.xml:23:9-81
+23        android:protectionLevel="signature" />
+23-->[androidx.core:core:1.13.0] C:\Users\신창호부장\.gradle\caches\transforms-3\c36f7d1c18709e2cc31a018daadbb18d\transformed\core-1.13.0\AndroidManifest.xml:24:9-44
+24
+25    <uses-permission android:name="com.biometric.poc.demo.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+25-->[androidx.core:core:1.13.0] C:\Users\신창호부장\.gradle\caches\transforms-3\c36f7d1c18709e2cc31a018daadbb18d\transformed\core-1.13.0\AndroidManifest.xml:26:5-97
+25-->[androidx.core:core:1.13.0] C:\Users\신창호부장\.gradle\caches\transforms-3\c36f7d1c18709e2cc31a018daadbb18d\transformed\core-1.13.0\AndroidManifest.xml:26:22-94
+26
+27    <application
+27-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:11:5-40:19
+28        android:name="com.biometric.poc.demo.BiometricApplication"
+28-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:12:9-45
+29        android:allowBackup="true"
+29-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:13:9-35
+30        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+30-->[androidx.core:core:1.13.0] C:\Users\신창호부장\.gradle\caches\transforms-3\c36f7d1c18709e2cc31a018daadbb18d\transformed\core-1.13.0\AndroidManifest.xml:28:18-86
+31        android:debuggable="true"
+32        android:extractNativeLibs="false"
+33        android:label="@string/app_name"
+33-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:14:9-41
+34        android:networkSecurityConfig="@xml/network_security_config"
+34-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:15:9-69
+35        android:theme="@style/Theme.BiometricDemo"
+35-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:16:9-51
+36        android:usesCleartextTraffic="true" >
+36-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:17:9-44
+37        <activity
+37-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:19:9-26:20
+38            android:name="com.biometric.poc.demo.MainActivity"
+38-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:20:13-41
+39            android:exported="true" >
+39-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:21:13-36
+40            <intent-filter>
+40-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:22:13-25:29
+41                <action android:name="android.intent.action.MAIN" />
+41-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:23:17-69
+41-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:23:25-66
+42
+43                <category android:name="android.intent.category.LAUNCHER" />
+43-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:24:17-77
+43-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:24:27-74
+44            </intent-filter>
+45        </activity>
+46        <activity
+46-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:28:9-30:40
+47            android:name="com.biometric.poc.demo.RegisterActivity"
+47-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:29:13-45
+48            android:exported="false" />
+48-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:30:13-37
+49        <activity
+49-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:32:9-34:40
+50            android:name="com.biometric.poc.demo.LoginActivity"
+50-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:33:13-42
+51            android:exported="false" />
+51-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:34:13-37
+52        <activity
+52-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:36:9-38:40
+53            android:name="com.biometric.poc.demo.MainAfterLoginActivity"
+53-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:37:13-51
+54            android:exported="false" />
+54-->C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:38:13-37
+55
+56        <provider
+56-->[androidx.emoji2:emoji2:1.3.0] C:\Users\신창호부장\.gradle\caches\transforms-3\de87859008baf4308a61f258fb3f584e\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
+57            android:name="androidx.startup.InitializationProvider"
+57-->[androidx.emoji2:emoji2:1.3.0] C:\Users\신창호부장\.gradle\caches\transforms-3\de87859008baf4308a61f258fb3f584e\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
+58            android:authorities="com.biometric.poc.demo.androidx-startup"
+58-->[androidx.emoji2:emoji2:1.3.0] C:\Users\신창호부장\.gradle\caches\transforms-3\de87859008baf4308a61f258fb3f584e\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
+59            android:exported="false" >
+59-->[androidx.emoji2:emoji2:1.3.0] C:\Users\신창호부장\.gradle\caches\transforms-3\de87859008baf4308a61f258fb3f584e\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
+60            <meta-data
+60-->[androidx.emoji2:emoji2:1.3.0] C:\Users\신창호부장\.gradle\caches\transforms-3\de87859008baf4308a61f258fb3f584e\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
+61                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+61-->[androidx.emoji2:emoji2:1.3.0] C:\Users\신창호부장\.gradle\caches\transforms-3\de87859008baf4308a61f258fb3f584e\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
+62                android:value="androidx.startup" />
+62-->[androidx.emoji2:emoji2:1.3.0] C:\Users\신창호부장\.gradle\caches\transforms-3\de87859008baf4308a61f258fb3f584e\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
+63            <meta-data
+63-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\신창호부장\.gradle\caches\transforms-3\a339e69884b1765cf49494df9f9f0cc5\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:29:13-31:52
+64                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+64-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\신창호부장\.gradle\caches\transforms-3\a339e69884b1765cf49494df9f9f0cc5\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:30:17-78
+65                android:value="androidx.startup" />
+65-->[androidx.lifecycle:lifecycle-process:2.6.2] C:\Users\신창호부장\.gradle\caches\transforms-3\a339e69884b1765cf49494df9f9f0cc5\transformed\lifecycle-process-2.6.2\AndroidManifest.xml:31:17-49
+66            <meta-data
+66-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+67                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+67-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+68                android:value="androidx.startup" />
+68-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+69        </provider>
+70
+71        <receiver
+71-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
+72            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+72-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
+73            android:directBootAware="false"
+73-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
+74            android:enabled="true"
+74-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
+75            android:exported="true"
+75-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
+76            android:permission="android.permission.DUMP" >
+76-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
+77            <intent-filter>
+77-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
+78                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+78-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
+78-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
+79            </intent-filter>
+80            <intent-filter>
+80-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
+81                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+81-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
+81-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
+82            </intent-filter>
+83            <intent-filter>
+83-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
+84                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+84-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
+84-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
+85            </intent-filter>
+86            <intent-filter>
+86-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
+87                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+87-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
+87-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\신창호부장\.gradle\caches\transforms-3\1353bff27fcddbc95cccd90fc64b77ee\transformed\profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
+88            </intent-filter>
+89        </receiver>
+90    </application>
+91
+92</manifest>

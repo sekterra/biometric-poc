@@ -28,6 +28,8 @@ public class TokenStorage {
 
     public TokenStorage(Context context) throws GeneralSecurityException, IOException {
         Context appContext = context.getApplicationContext();
+        // Android 12+ (Samsung Knox) 호환: MasterKey.Builder API 사용
+        // security-crypto:1.0.0의 MasterKeys.getOrCreate()는 Android 12+ Keystore 변경과 충돌
         MasterKey masterKey =
                 new MasterKey.Builder(appContext)
                         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)

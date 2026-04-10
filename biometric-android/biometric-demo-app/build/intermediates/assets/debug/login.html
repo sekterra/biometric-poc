@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>MIS 로그인</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Malgun Gothic', sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+    }
+
+    h1 {
+      font-size: 20px;
+      font-weight: bold;
+      color: #212121;
+      margin-bottom: 24px;
+    }
+
+    /* ── 로그인 카드 ── */
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .face-icon {
+      font-size: 64px;
+      line-height: 1;
+    }
+
+    /* ── 버튼 공통 ── */
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary {
+      background: #1976D2;
+      color: #fff;
+    }
+    .btn-outline {
+      background: #fff;
+      color: #1976D2;
+      border: 2px solid #1976D2;
+    }
+
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: rgba(0,0,0,0.12);
+    }
+
+    /* ── 상태 메시지 ── */
+    #statusMsg {
+      display: none;
+      text-align: center;
+      font-size: 14px;
+      margin-top: 12px;
+      color: #d32f2f;
+      white-space: pre-line;
+    }
+
+    #lockNotice {
+      display: none;
+      text-align: center;
+      font-size: 14px;
+      color: #e65100;
+      margin-top: 16px;
+      font-weight: bold;
+    }
+
+    #failureCount {
+      display: none;
+      text-align: center;
+      font-size: 14px;
+      color: #757575;
+      margin-top: 8px;
+    }
+
+    /* ── 로딩 스피너 ── */
+    #progress {
+      display: none;
+      text-align: center;
+      margin-top: 16px;
+    }
+    .spinner {
+      display: inline-block;
+      width: 32px;
+      height: 32px;
+      border: 3px solid #e0e0e0;
+      border-top-color: #1976D2;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── 계정 잠금 ID/PW 영역 ── */
+    #idpwArea {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 16px;
+      width: 100%;
+    }
+    .field-label {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 2px;
+    }
+    .field-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 15px;
+      margin-bottom: 8px;
+    }
+    .field-input:focus { outline: none; border-color: #1976D2; }
+
+    /* ── 담당자 변경 ── */
+    #userChangeBtn {
+      display: block;
+      text-align: center;
+      margin-top: 16px;
+      font-size: 13px;
+      color: #aaa;
+      cursor: pointer;
+      padding: 8px 0;
+      background: none;
+      border: none;
+      width: 100%;
+    }
+    #userChangeBtn:hover { color: #666; }
+
+    /* ── 스낵바 ── */
+    #snackbar {
+      display: none;
+      position: fixed;
+      bottom: 24px;
+      left: 16px;
+      right: 16px;
+      background: #323232;
+      color: #fff;
+      padding: 14px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      z-index: 999;
+      animation: fadeIn 0.3s;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+  </style>
+</head>
+<body>
+
+  <h1>MIS 로그인</h1>
+
+  <div class="card">
+    <div class="face-icon">&#128100;</div>
+
+    <!-- 안면인식 로그인 버튼 -->
+    <button id="btnFaceLogin" class="btn btn-primary" onclick="startFaceLogin()">
+      안면인식 로그인
+    </button>
+
+    <div class="divider"></div>
+
+    <!-- ID/PW 로그인 (기본 숨김 — ACCOUNT_LOCKED 시 표시) -->
+    <button id="btnIdPwToggle" class="btn btn-outline"
+            style="display:none" onclick="toggleIdPwArea()">
+      ID/PW 로그인
+    </button>
+  </div>
+
+  <!-- 잠금 카운트다운 -->
+  <div id="lockNotice"></div>
+
+  <!-- 실패 횟수 안내 -->
+  <div id="failureCount"></div>
+
+  <!-- 로딩 스피너 -->
+  <div id="progress"><div class="spinner"></div></div>
+
+  <!-- 상태 메시지 -->
+  <div id="statusMsg"></div>
+
+  <!-- 계정 잠금 시 ID/PW 입력 영역 -->
+  <div id="idpwArea">
+    <div class="field-label">사용자 ID</div>
+    <input id="etUserId" class="field-input" type="text" placeholder="사용자 ID" />
+    <div class="field-label">비밀번호</div>
+    <input id="etPassword" class="field-input" type="password" placeholder="비밀번호" />
+    <button class="btn btn-primary" onclick="submitIdPwLogin()">로그인</button>
+  </div>
+
+  <!-- 담당자 변경 -->
+  <button id="userChangeBtn" onclick="openUserChangeDialog()">담당자 변경</button>
+
+  <!-- 스낵바 -->
+  <div id="snackbar"></div>
+
+  <script>
+    /* =========================================================
+       Native → JS 콜백 함수 (Android.evaluateJavascript 로 호출됨)
+       ========================================================= */
+
+    /**
+     * 로그인 성공 — MainAfterLoginActivity 이동은 Native가 처리.
+     * WebView에서는 로딩만 유지.
+     */
+    function onLoginSuccess() {
+      showProgress(true);
+    }
+
+    /**
+     * 인증 실패 (얼굴 불일치) — 아직 잠금 전
+     * @param {number} failureCount  누적 실패 횟수
+     * @param {number} maxCount      잠금까지 최대 횟수
+     */
+    function onRetry(failureCount, maxCount) {
+      showProgress(false);
+      setFaceLoginEnabled(true);
+      document.getElementById('failureCount').style.display = 'block';
+      document.getElementById('failureCount').textContent =
+        '인증 실패 ' + failureCount + '회 / ' + maxCount + '회 초과 시 계정 잠금';
+    }
+
+    /**
+     * 잠금 시작 — 카운트다운 표시
+     * @param {number} seconds  잠금 남은 시간(초)
+     */
+    function onLockedOut(seconds) {
+      showProgress(false);
+      setFaceLoginEnabled(false);
+      document.getElementById('lockNotice').style.display = 'block';
+      document.getElementById('lockNotice').textContent = '인증 ' + seconds + '초 잠금 중...';
+    }
+
+    /**
+     * 잠금 카운트다운 틱 (1초마다 Native CountDownTimer가 호출)
+     * @param {number} seconds  남은 초
+     */
+    function onCountdownTick(seconds) {
+      document.getElementById('lockNotice').textContent = '인증 ' + seconds + '초 잠금 중...';
+    }
+
+    /** 잠금 해제 완료 */
+    function onCountdownFinish() {
+      document.getElementById('lockNotice').style.display = 'none';
+      setFaceLoginEnabled(true);
+    }
+
+    /** 계정 잠금 — ID/PW 입력 영역 표시 */
+    function onAccountLocked() {
+      showProgress(false);
+      setFaceLoginEnabled(false);
+      showStatus('로그인 시도가 많아 계정 보호를 위해 사용이 제한되었습니다.\nID/PW로 로그인하시면 잠금이 해제됩니다.', '#d32f2f');
+      document.getElementById('idpwArea').style.display = 'flex';
+      document.getElementById('btnIdPwToggle').style.display = 'block';
+    }
+
+    /**
+     * SESSION_EXPIRED 자동 재시도 중
+     * @param {number} retryCount  현재 재시도 횟수
+     * @param {number} maxRetry    최대 재시도 횟수
+     */
+    function onSessionRetrying(retryCount, maxRetry) {
+      showProgress(true);
+      setFaceLoginEnabled(false);
+      showStatus('인증을 재시도하고 있습니다. (' + retryCount + '/' + maxRetry + ')', '#e65100');
+    }
+
+    /**
+     * 오류 발생 — 스낵바로 표시
+     * @param {string} message  사용자 안내 메시지
+     */
+    function onError(message) {
+      showProgress(false);
+      setFaceLoginEnabled(true);
+      hideStatusMsg();
+      showSnackbar(message);
+    }
+
+    /** 기기 미등록 → Native에서 RegisterActivity로 이동 */
+    function onNotRegistered() {
+      showProgress(false);
+    }
+
+    /** ID/PW 잠금 해제 성공 */
+    function onUnlockSuccess() {
+      document.getElementById('idpwArea').style.display = 'none';
+      document.getElementById('btnIdPwToggle').style.display = 'none';
+      showProgress(false);
+      setFaceLoginEnabled(true);
+      showStatus('잠금이 해제되었습니다. 안면인식으로 로그인해주세요.', '#388e3c');
+    }
+
+    /** ID/PW 잠금 해제 실패 */
+    function onUnlockFailed() {
+      showProgress(false);
+      document.querySelector('#idpwArea button').disabled = false;
+      showSnackbar('문제가 지속되면 헬프데스크로 문의해주세요.');
+    }
+
+    /* =========================================================
+       JS → Native 호출 함수
+       ========================================================= */
+
+    /** 안면인식 로그인 버튼 클릭 */
+    function startFaceLogin() {
+      clearUiState();
+      showProgress(true);
+      setFaceLoginEnabled(false);
+      Android.startFaceLogin();
+    }
+
+    /** ID/PW 입력 후 잠금 해제 제출 */
+    function submitIdPwLogin() {
+      var userId = document.getElementById('etUserId').value.trim();
+      var password = document.getElementById('etPassword').value;
+      if (!userId || !password) {
+        showSnackbar('ID와 비밀번호를 입력해주세요.');
+        return;
+      }
+      showProgress(true);
+      document.querySelector('#idpwArea button').disabled = true;
+      Android.startIdPwUnlock(userId, password);
+    }
+
+    /** 담당자 변경 다이얼로그 (Native AlertDialog) */
+    function openUserChangeDialog() {
+      Android.openUserChangeDialog();
+    }
+
+    /** ID/PW 영역 토글 */
+    function toggleIdPwArea() {
+      var area = document.getElementById('idpwArea');
+      area.style.display = (area.style.display === 'none' || area.style.display === '') ? 'flex' : 'none';
+    }
+
+    /* =========================================================
+       UI 유틸리티
+       ========================================================= */
+
+    function showProgress(show) {
+      document.getElementById('progress').style.display = show ? 'block' : 'none';
+    }
+
+    function setFaceLoginEnabled(enabled) {
+      document.getElementById('btnFaceLogin').disabled = !enabled;
+    }
+
+    function showStatus(message, color) {
+      var el = document.getElementById('statusMsg');
+      el.textContent = message;
+      el.style.color = color || '#d32f2f';
+      el.style.display = 'block';
+    }
+
+    function hideStatusMsg() {
+      document.getElementById('statusMsg').style.display = 'none';
+    }
+
+    function clearUiState() {
+      hideStatusMsg();
+      document.getElementById('failureCount').style.display = 'none';
+      document.getElementById('lockNotice').style.display = 'none';
+    }
+
+    var snackbarTimer = null;
+    function showSnackbar(message) {
+      var el = document.getElementById('snackbar');
+      el.textContent = message;
+      el.style.display = 'block';
+      if (snackbarTimer) clearTimeout(snackbarTimer);
+      snackbarTimer = setTimeout(function() {
+        el.style.display = 'none';
+      }, 3500);
+    }
+  </script>
+</body>
+</html>

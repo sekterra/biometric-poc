@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>MIS 메인</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Malgun Gothic', sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── 툴바 (MaterialToolbar 대체) ── */
+    .toolbar {
+      background: #6200EE;
+      color: #fff;
+      padding: 16px 20px;
+      font-size: 18px;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    /* ── 본문 ── */
+    .content {
+      flex: 1;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    /* ── 환영 메시지 ── */
+    #textWelcome {
+      font-size: 20px;
+      font-weight: bold;
+      color: #212121;
+      margin-bottom: 8px;
+    }
+
+    #textAuthMethod {
+      font-size: 14px;
+      color: #2E7D32;
+      margin-bottom: 24px;
+    }
+
+    /* ── 토큰 카드 ── */
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      padding: 16px;
+      margin-bottom: 32px;
+    }
+
+    .card-label {
+      font-size: 12px;
+      font-weight: bold;
+      color: #212121;
+      margin-bottom: 6px;
+    }
+
+    #textTokenPreview {
+      font-family: monospace;
+      font-size: 12px;
+      color: #424242;
+      word-break: break-all;
+      margin-bottom: 12px;
+    }
+
+    #textExpires {
+      font-size: 12px;
+      color: #757575;
+    }
+
+    /* ── 로그아웃 버튼 ── */
+    #btnLogout {
+      width: 100%;
+      padding: 14px;
+      background: #fff;
+      color: #d32f2f;
+      border: 2px solid #d32f2f;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    #btnLogout:hover { opacity: 0.8; }
+  </style>
+</head>
+<body>
+
+  <!-- MaterialToolbar 대체 헤더 -->
+  <div class="toolbar">MIS 메인</div>
+
+  <div class="content">
+    <!-- 환영 메시지 -->
+    <div id="textWelcome"></div>
+    <div id="textAuthMethod">안면인식 로그인 완료</div>
+
+    <!-- Access Token 카드 -->
+    <div class="card">
+      <div class="card-label">Access Token</div>
+      <div id="textTokenPreview">-</div>
+      <div id="textExpires">-</div>
+    </div>
+
+    <!-- 로그아웃 -->
+    <button id="btnLogout" onclick="Android.logout()">로그아웃</button>
+  </div>
+
+  <script>
+    /**
+     * Native → JS 초기화 함수.
+     * MainAfterLoginActivity의 onPageFinished에서 1회 호출됨.
+     *
+     * @param {string} userId       로그인한 사용자 ID
+     * @param {string} tokenPreview 토큰 앞 20자 미리보기
+     * @param {number} expiresMin   토큰 만료까지 남은 분
+     */
+    function initPage(userId, tokenPreview, expiresMin) {
+      document.getElementById('textWelcome').textContent = '안녕하세요, ' + userId + '님!';
+      document.getElementById('textTokenPreview').textContent = tokenPreview;
+      document.getElementById('textExpires').textContent = '만료까지: ' + expiresMin + '분';
+    }
+  </script>
+</body>
+</html>

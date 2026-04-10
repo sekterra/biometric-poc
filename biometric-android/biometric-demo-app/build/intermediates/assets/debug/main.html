@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>MIS 생체인증</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Malgun Gothic', sans-serif;
+      background: #fff;
+      min-height: 100vh;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── 타이틀 ── */
+    .title {
+      font-size: 24px;
+      font-weight: bold;
+      color: #212121;
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    /* ── 로딩 스피너 ── */
+    #progress {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      margin-top: 24px;
+      width: 100%;
+    }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid #e0e0e0;
+      border-top-color: #6200EE;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── 상태 텍스트 ── */
+    #statusText {
+      font-size: 14px;
+      color: #757575;
+      text-align: center;
+    }
+
+    /* ── ACTIVE: 환영 + 담당자 변경 버튼 ── */
+    #activeArea {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    #statusMessage {
+      font-size: 14px;
+      color: #212121;
+      text-align: center;
+    }
+
+    #btnUserChange {
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 8px 0;
+      margin-top: 8px;
+    }
+    #btnUserChange:hover { color: #555; }
+
+    /* ── LOCKED: 비밀번호 입력 영역 ── */
+    #lockedArea {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    #lockedMessage {
+      font-size: 14px;
+      color: #e65100;
+      text-align: center;
+      white-space: pre-line;
+      margin-bottom: 8px;
+    }
+
+    .field-input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .field-input:focus { outline: none; border-color: #6200EE; }
+    .field-input[readonly] { background: #f5f5f5; color: #555; }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: #6200EE;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── 에러 상태 ── */
+    #errorArea {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      margin-top: 16px;
+    }
+
+    #errorMessage {
+      font-size: 14px;
+      color: #d32f2f;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="title">MIS 생체인증 PoC</div>
+
+  <!-- 로딩 상태 (기본 표시) -->
+  <div id="progress">
+    <div class="spinner"></div>
+    <div id="statusText">단말기 상태를 확인하고 있습니다.</div>
+  </div>
+
+  <!-- ACTIVE 상태 -->
+  <div id="activeArea">
+    <div id="statusMessage"></div>
+    <button id="btnUserChange" onclick="Android.openUserChangeDialog()" style="display:none">
+      담당자 변경
+    </button>
+  </div>
+
+  <!-- LOCKED 상태 -->
+  <div id="lockedArea">
+    <div id="lockedMessage">안면인식 로그인이 잠긴 상태입니다(5회 실패).<br>ID/PW 로그인 후 잠금이 해제됩니다.</div>
+    <input id="etUserId" class="field-input" type="text" readonly placeholder="사용자 ID" />
+    <input id="etPassword" class="field-input" type="password" placeholder="비밀번호를 입력하세요" />
+    <button class="btn-primary" id="btnLogin" onclick="submitLockedLogin()">로그인</button>
+  </div>
+
+  <!-- 에러 상태 -->
+  <div id="errorArea">
+    <div id="errorMessage"></div>
+  </div>
+
+  <script>
+    /* =========================================================
+       Native → JS 상태 콜백
+       ========================================================= */
+
+    /** 서버 조회 시작 (기본값이므로 보통 생략 가능) */
+    function onStatusLoading() {
+      show('progress');
+      document.getElementById('statusText').textContent = '단말기 상태를 확인하고 있습니다.';
+    }
+
+    /**
+     * ACTIVE 상태 — 환영 메시지 표시 후 자동 이동 (Native에서 처리)
+     * @param {string} userId 서버에서 조회한 사용자 ID
+     */
+    function onStatusActive(userId) {
+      show('activeArea');
+      document.getElementById('statusMessage').textContent =
+        '안녕하세요, ' + userId + '님. 로그인 화면으로 이동합니다.';
+      document.getElementById('btnUserChange').style.display = 'block';
+    }
+
+    /**
+     * LOCKED 상태 — 비밀번호 입력 영역 표시
+     * @param {string} userId 잠긴 계정의 사용자 ID
+     */
+    function onStatusLocked(userId) {
+      show('lockedArea');
+      document.getElementById('etUserId').value = userId || '';
+    }
+
+    /** KEY_INVALIDATED 상태 — Native AlertDialog가 처리하므로 JS는 로딩만 숨김 */
+    function onStatusKeyInvalidated() {
+      show('progress');  // AlertDialog 뒤 배경용 (빈 화면 방지)
+    }
+
+    /**
+     * 에러 상태
+     * @param {string} message 사용자에게 표시할 메시지
+     */
+    function onStatusError(message) {
+      show('errorArea');
+      document.getElementById('errorMessage').textContent = message;
+    }
+
+    /** ID/PW 잠금 해제 성공 → Native에서 화면 전환 처리 */
+    function onUnlockSuccess() {
+      show('progress');
+      document.getElementById('statusText').textContent = '잠금이 해제되었습니다.';
+    }
+
+    /** ID/PW 잠금 해제 실패 */
+    function onUnlockFailed(message) {
+      document.getElementById('btnLogin').disabled = false;
+      alert(message || '문제가 지속되면 헬프데스크로 문의해주세요.');
+    }
+
+    /* =========================================================
+       JS → Native 호출
+       ========================================================= */
+
+    /** LOCKED 상태에서 로그인 버튼 클릭 */
+    function submitLockedLogin() {
+      var password = document.getElementById('etPassword').value;
+      if (!password) {
+        alert('비밀번호를 입력해주세요.');
+        return;
+      }
+      document.getElementById('btnLogin').disabled = true;
+      Android.submitLockedLogin(password);
+    }
+
+    /* =========================================================
+       유틸리티
+       ========================================================= */
+
+    var AREAS = ['progress', 'activeArea', 'lockedArea', 'errorArea'];
+
+    /** 지정한 영역만 표시하고 나머지 숨김 */
+    function show(areaId) {
+      AREAS.forEach(function(id) {
+        document.getElementById(id).style.display = (id === areaId) ? 'flex' : 'none';
+      });
+    }
+  </script>
+</body>
+</html>

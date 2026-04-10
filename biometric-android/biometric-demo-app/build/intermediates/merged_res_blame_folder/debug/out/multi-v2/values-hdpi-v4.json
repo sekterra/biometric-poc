@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.biometric.poc.demo.biometric-demo-app-mergeDebugResources-31:/values-hdpi-v4/values-hdpi-v4.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\74c0aa74c6cd0d99699e92401439d9bc\\transformed\\appcompat-1.7.0\\res\\values-hdpi-v4\\values-hdpi-v4.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "6",
+                        "endColumns": "13",
+                        "endOffsets": "327"
+                    }
+                }
+            ]
+        }
+    ]
+}

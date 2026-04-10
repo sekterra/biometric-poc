@@ -6,10 +6,9 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
-import android.view.View;
-import android.widget.EditText;
-import android.widget.ProgressBar;
-import android.widget.TextView;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -19,351 +18,116 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.biometric.poc.lib.BiometricLibConstants;
 import com.biometric.poc.lib.ErrorCode;
 import com.biometric.poc.lib.auth.UserChangeHandler;
-import com.biometric.poc.lib.crypto.EcKeyManager;
-import com.biometric.poc.lib.network.AuthApiClient;
 import com.biometric.poc.lib.network.AuthApiClient.DeviceStatusResponse;
 import com.biometric.poc.lib.network.DeviceNotFoundException;
 import com.biometric.poc.lib.storage.TokenStorage;
-import com.google.android.material.button.MaterialButton;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 
+/**
+ * 앱 진입점 Activity — WebView 기반 HTML/JS UI.
+ *
+ * <p>레이아웃: {@code assets/main.html}
+ * <p>흐름: 기기 상태 서버 조회 → 결과에 따라 JS 콜백 호출
+ * <ul>
+ *   <li>ACTIVE → {@code onStatusActive(userId)} → 2초 후 LoginActivity 이동</li>
+ *   <li>LOCKED → {@code onStatusLocked(userId)} → ID/PW 입력 후 잠금 해제</li>
+ *   <li>KEY_INVALIDATED → Native AlertDialog → 키 삭제 후 RegisterActivity 이동</li>
+ * </ul>
+ * <p>UserChangeHandler 콜백·AlertDialog는 Native 유지.
+ */
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
 
-    public static final String EXTRA_DEVICE_ID = "device_id";
-    public static final String EXTRA_USER_ID = "user_id";
-    public static final String EXTRA_BUTTON_LABEL = "button_label";
-
-    private TextView subtitleText;
-    private ProgressBar progressBar;
-    private TextView statusMessage;
-    private EditText lockedUserIdEdit;
-    private EditText passwordEdit;
-    private MaterialButton loginButton;
-    private MaterialButton btnUserChange;
-
+    private WebView webView;
     private TokenStorage tokenStorage;
-    private AuthApiClient authApiClient;
-    private EcKeyManager ecKeyManager;
     private UserChangeHandler userChangeHandler;
+
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    /** onDestroy 시 취소할 지연 화면 전환 Runnable. */
-    @Nullable private Runnable pendingNavigation = null;
+    /** onDestroy 시 취소할 지연 화면 전환 Runnable */
+    @Nullable
+    private Runnable pendingNavigation = null;
 
-    private String pendingDeviceIdForLocked;
-    private String pendingUserIdForLocked;
+    /** LOCKED 상태에서 unlock 요청에 필요한 기기·사용자 ID */
+    private String pendingDeviceId;
+    private String pendingUserId;
+
+    /** WebView 로드 완료 여부 — onPageFinished 이전 evaluateJavascript 방지 */
+    private boolean pageLoaded = false;
+
+    /** pageLoaded 전 수신된 상태 콜백 저장 (페이지 로드 전 API 응답 도착 대비) */
+    @Nullable
+    private Runnable deferredStatusCall = null;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // ── TokenStorage 초기화 ──────────────────────────────────
         try {
             tokenStorage = new TokenStorage(this);
         } catch (GeneralSecurityException | IOException e) {
             throw new RuntimeException("TokenStorage 초기화 실패", e);
         }
 
+        // 이미 등록된 경우 로그인 화면으로 바로 이동
         if (tokenStorage.isRegistered()) {
             startActivity(new Intent(this, LoginActivity.class));
             finish();
             return;
         }
 
-        setContentView(R.layout.activity_main);
-        bindViews();
-        authApiClient = BiometricApplication.getAuthApiClient();
-        ecKeyManager = BiometricApplication.getEcKeyManager();
+        // ── UserChangeHandler 초기화 ─────────────────────────────
         userChangeHandler = new UserChangeHandler(
-                this, ecKeyManager, tokenStorage, authApiClient,
+                this,
+                BiometricApplication.getEcKeyManager(),
+                tokenStorage,
+                BiometricApplication.getAuthApiClient(),
                 BiometricApplication.getExecutor());
+
+        // ── WebView 설정 ─────────────────────────────────────────
+        webView = new WebView(this);
+        setContentView(webView);
+
+        webView.getSettings().setJavaScriptEnabled(true);
+        webView.getSettings().setDomStorageEnabled(true);
+        webView.addJavascriptInterface(new MainBridge(), "Android");
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                pageLoaded = true;
+                // 페이지 로드 전 도착한 상태 콜백이 있으면 지금 실행
+                if (deferredStatusCall != null) {
+                    runOnUiThread(deferredStatusCall);
+                    deferredStatusCall = null;
+                }
+            }
+        });
+
+        webView.loadUrl("file:///android_asset/main.html");
+
+        // ── 기기 상태 서버 조회 시작 ─────────────────────────────
         checkDeviceStatus();
     }
 
-    private void bindViews() {
-        subtitleText = findViewById(R.id.main_subtitle);
-        progressBar = findViewById(R.id.main_progress);
-        statusMessage = findViewById(R.id.main_status_message);
-        lockedUserIdEdit = findViewById(R.id.main_locked_user_id);
-        passwordEdit = findViewById(R.id.main_password);
-        loginButton = findViewById(R.id.main_login_button);
-        btnUserChange = findViewById(R.id.btnUserChange);
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // isRegistered()가 true인 경우 onCreate에서 finish()를 호출하고 webView를 초기화하지 않으므로
+        // onResume()이 호출되면 NPE 발생 — null 가드 추가
+        if (webView == null) return;
+        webView.onResume();
     }
 
-    private void hideLockedUi() {
-        lockedUserIdEdit.setVisibility(View.GONE);
-        passwordEdit.setVisibility(View.GONE);
-        loginButton.setVisibility(View.GONE);
-    }
-
-    private void checkDeviceStatus() {
-        subtitleText.setVisibility(View.VISIBLE);
-        subtitleText.setText(R.string.main_lookup_device_id);
-        progressBar.setVisibility(View.VISIBLE);
-        statusMessage.setVisibility(View.GONE);
-        hideLockedUi();
-
-        BiometricApplication.getExecutor().submit(
-                () -> {
-                    String deviceId =
-                            Settings.Secure.getString(
-                                    getContentResolver(), Settings.Secure.ANDROID_ID);
-                    try {
-                        DeviceStatusResponse response = authApiClient.getUserId(deviceId);
-                        runOnUiThread(() -> handleDeviceStatus(response, deviceId));
-                    } catch (DeviceNotFoundException e) {
-                        runOnUiThread(() -> showNotRegisteredUi(deviceId));
-                    } catch (Exception e) {
-                        String msg =
-                                e.getMessage() != null
-                                        ? e.getMessage()
-                                        : e.getClass().getSimpleName();
-                        runOnUiThread(() -> showError(msg));
-                    }
-                });
-    }
-
-    private void handleDeviceStatus(DeviceStatusResponse response, String deviceId) {
-        progressBar.setVisibility(View.GONE);
-        subtitleText.setVisibility(View.GONE);
-        String status = response.status != null ? response.status : "";
-        switch (status) {
-            case "ACTIVE":
-                hideLockedUi();
-                tokenStorage.saveRegistration(deviceId, response.userId);
-                statusMessage.setVisibility(View.VISIBLE);
-                statusMessage.setText(
-                        getString(
-                                R.string.main_greeting_format,
-                                response.userId != null ? response.userId : ""));
-                // 담당자 변경 버튼 표시
-                btnUserChange.setVisibility(View.VISIBLE);
-                btnUserChange.setOnClickListener(v -> showUserChangeDialog());
-                pendingNavigation = () -> {
-                    if (!isFinishing()) {
-                        startActivity(new Intent(MainActivity.this, LoginActivity.class));
-                        finish();
-                    }
-                };
-                mainHandler.postDelayed(pendingNavigation, BiometricLibConstants.UI_REDIRECT_DELAY_LONG_MS);
-                break;
-            case "LOCKED":
-                showLockedUi(response.userId, deviceId);
-                break;
-            case "KEY_INVALIDATED":
-                showKeyInvalidatedDialog(response.userId, deviceId);
-                break;
-            default:
-                hideLockedUi();
-                showError(getString(R.string.main_unknown_status, status));
-                break;
-        }
-    }
-
-    private void showNotRegisteredUi(String deviceId) {
-        // TODO: [실서비스] USER_ID를 서버에서 검증 (MIS 사용자 DB 조회)
-        // TODO: [실서비스] 1사용자 다기기 등록 정책 확인 후 기기 교체 시나리오(기존 기기 비활성화) 처리 필요
-        Intent intent = new Intent(this, RegisterActivity.class);
-        intent.putExtra("device_id", deviceId);
-        intent.putExtra("button_label", "사용자ID 및 기기 등록");
-        startActivity(intent);
-        finish();
-    }
-
-    private void showLockedUi(String userId, String deviceId) {
-        // TODO: [실서비스] 이 화면에서 직접 unlock을 호출하지 않음 — 실제 ID/PW는 MIS 인증 서버에서 검증 후
-        //        MIS 서버 → biometric-auth-server PUT /api/device/unlock 호출, 앱은 unlock 완료 여부만 폴링 또는 콜백으로 확인
-        pendingDeviceIdForLocked = deviceId;
-        pendingUserIdForLocked = userId;
-        subtitleText.setVisibility(View.VISIBLE);
-        subtitleText.setText(R.string.main_locked_message);
-        lockedUserIdEdit.setVisibility(View.VISIBLE);
-        lockedUserIdEdit.setText(userId != null ? userId : "");
-        lockedUserIdEdit.setEnabled(false);
-        lockedUserIdEdit.setFocusable(false);
-        passwordEdit.setVisibility(View.VISIBLE);
-        passwordEdit.setText("");
-        loginButton.setVisibility(View.VISIBLE);
-        loginButton.setText(R.string.main_button_login);
-        loginButton.setEnabled(true);
-        loginButton.setOnClickListener(v -> onLockedLoginClick());
-    }
-
-    private void onLockedLoginClick() {
-        String deviceId = pendingDeviceIdForLocked;
-        String userId = pendingUserIdForLocked;
-        if (deviceId == null || userId == null) {
-            showError("내부 오류: 단말 정보가 없습니다.");
-            return;
-        }
-        loginButton.setEnabled(false);
-        BiometricApplication.getExecutor().submit(
-                () -> {
-                    try {
-                        authApiClient.unlockDevice(deviceId);
-                        tokenStorage.saveRegistration(deviceId, userId);
-                        runOnUiThread(
-                                () -> {
-                                    Toast.makeText(
-                                                    this,
-                                                    R.string.main_unlock_success,
-                                                    Toast.LENGTH_SHORT)
-                                            .show();
-                                    pendingNavigation = () -> {
-                                        if (!isFinishing()) {
-                                            startActivity(new Intent(
-                                                    MainActivity.this, LoginActivity.class));
-                                            finish();
-                                        }
-                                    };
-                                    mainHandler.postDelayed(
-                                            pendingNavigation,
-                                            BiometricLibConstants.UI_REDIRECT_DELAY_LONG_MS);
-                                });
-                    } catch (DeviceNotFoundException e) {
-                        runOnUiThread(
-                                () -> {
-                                    loginButton.setEnabled(true);
-                                    showError("기기를 찾을 수 없습니다.");
-                                });
-                    } catch (Exception e) {
-                        String msg =
-                                e.getMessage() != null
-                                        ? e.getMessage()
-                                        : e.getClass().getSimpleName();
-                        runOnUiThread(
-                                () -> {
-                                    loginButton.setEnabled(true);
-                                    showError(msg);
-                                });
-                    }
-                });
-    }
-
-    private void showKeyInvalidatedDialog(String userId, String deviceId) {
-        progressBar.setVisibility(View.GONE);
-        subtitleText.setVisibility(View.GONE);
-        new AlertDialog.Builder(this)
-                .setTitle(R.string.main_security_alert_title)
-                .setMessage(R.string.main_key_invalidated_message)
-                .setPositiveButton(
-                        R.string.main_new_user_register,
-                        (d, w) ->
-                                BiometricApplication.getExecutor().submit(
-                                        () -> {
-                                            // TODO: [실서비스] 보안 이벤트 서버 로그 기록, 관리자 알림 연동 검토,
-                                            //        기존 USER_ID 접근 권한 해제 처리 검토
-                                            try {
-                                                BiometricApplication.getEcKeyManager().deleteKeyPair();
-                                                tokenStorage.clearRegistration();
-                                                runOnUiThread(
-                                                        () ->
-                                                                showKeyInvalidatedRegisterUi(
-                                                                        deviceId, userId));
-                                            } catch (Exception e) {
-                                                String msg =
-                                                        e.getMessage() != null
-                                                                ? e.getMessage()
-                                                                : e.getClass()
-                                                                        .getSimpleName();
-                                                runOnUiThread(() -> showError(msg));
-                                            }
-                                        }))
-                .setNegativeButton(
-                        android.R.string.cancel,
-                        (d, w) ->
-                                new AlertDialog.Builder(this)
-                                        .setMessage(R.string.main_must_reregister_exit)
-                                        .setPositiveButton(
-                                                android.R.string.ok,
-                                                (d2, w2) -> finishAffinity())
-                                        .show())
-                .setCancelable(false)
-                .show();
-    }
-
-    @SuppressWarnings("unused")
-    private void showKeyInvalidatedRegisterUi(String deviceId, String userId) {
-        Intent intent = new Intent(this, RegisterActivity.class);
-        intent.putExtra("device_id", deviceId);
-        intent.putExtra("button_label", "사용자 변경");
-        startActivity(intent);
-        finish();
-    }
-
-    // TODO: [리팩터링] showUserChangeDialog 로직이 LoginActivity와 유사함.
-    //  참조하는 View 필드가 달라 즉시 추출은 어려움 — 실서비스 전환 시 공통 BaseActivity 또는
-    //  UserChangeDialogHelper 클래스 추출 검토.
-    private void showUserChangeDialog() {
-        if (isFinishing()) return;
-        new AlertDialog.Builder(this)
-                .setTitle(getString(R.string.user_change_dialog_title))
-                .setMessage(getString(R.string.user_change_dialog_message))
-                .setPositiveButton("확인", (dialog, which) -> {
-                    Log.d(TAG, "담당자 변경 확인 → 기기 자격증명 인증 시작");
-                    userChangeHandler.verifyDeviceCredential(
-                            this,
-                            new UserChangeHandler.UserChangeCallback() {
-
-                                @Override
-                                public void onVerified() {
-                                    progressBar.setVisibility(View.VISIBLE);
-                                    btnUserChange.setEnabled(false);
-                                    userChangeHandler.executeChange(MainActivity.this, this);
-                                }
-
-                                @Override
-                                public void onChangeCompleted() {
-                                    Log.d(TAG, "사용자 변경 완료 → 등록 화면 이동");
-                                    progressBar.setVisibility(View.GONE);
-                                    Toast.makeText(
-                                            MainActivity.this,
-                                            getString(R.string.user_change_completed),
-                                            Toast.LENGTH_SHORT).show();
-                                    pendingNavigation = () -> {
-                                        if (!isFinishing()) {
-                                            Intent intent = new Intent(
-                                                    MainActivity.this, RegisterActivity.class);
-                                            intent.putExtra("button_label", "신규 사용자 등록");
-                                            startActivity(intent);
-                                            finish();
-                                        }
-                                    };
-                                    mainHandler.postDelayed(
-                                            pendingNavigation,
-                                            BiometricLibConstants.UI_REDIRECT_DELAY_MS);
-                                }
-
-                                @Override
-                                public void onChangeFailed(ErrorCode errorCode) {
-                                    progressBar.setVisibility(View.GONE);
-                                    btnUserChange.setEnabled(true);
-                                    Log.e(TAG, "사용자 변경 실패: " + errorCode);
-                                    Toast.makeText(
-                                            MainActivity.this,
-                                            getString(R.string.contact_helpdesk),
-                                            Toast.LENGTH_LONG).show();
-                                }
-
-                                @Override
-                                public void onCanceled() {
-                                    Log.d(TAG, "사용자 변경 취소");
-                                    btnUserChange.setEnabled(true);
-                                }
-                            });
-                })
-                .setNegativeButton("취소", null)
-                .show();
-    }
-
-    private void showError(String message) {
-        progressBar.setVisibility(View.GONE);
-        subtitleText.setVisibility(View.GONE);
-        statusMessage.setVisibility(View.VISIBLE);
-        statusMessage.setText(message);
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (webView == null) return;
+        webView.onPause();
     }
 
     @Override
@@ -372,6 +136,257 @@ public class MainActivity extends AppCompatActivity {
             mainHandler.removeCallbacks(pendingNavigation);
             pendingNavigation = null;
         }
+        if (webView != null) {
+            webView.stopLoading();
+            webView.destroy();
+        }
         super.onDestroy();
+    }
+
+    /* =========================================================
+       기기 상태 조회 — 서버 API 호출
+       ========================================================= */
+
+    private void checkDeviceStatus() {
+        callJs("onStatusLoading()");
+
+        BiometricApplication.getExecutor().submit(() -> {
+            String deviceId = Settings.Secure.getString(
+                    getContentResolver(), Settings.Secure.ANDROID_ID);
+            try {
+                DeviceStatusResponse response =
+                        BiometricApplication.getAuthApiClient().getUserId(deviceId);
+                runOnUiThread(() -> handleDeviceStatus(response, deviceId));
+            } catch (DeviceNotFoundException e) {
+                // 미등록 기기 → RegisterActivity로 이동
+                runOnUiThread(() -> navigateToRegister(deviceId));
+            } catch (Exception e) {
+                String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                runOnUiThread(() -> callJs("onStatusError('" + escapeJs(msg) + "')"));
+            }
+        });
+    }
+
+    private void handleDeviceStatus(DeviceStatusResponse response, String deviceId) {
+        String status = response.status != null ? response.status : "";
+        switch (status) {
+            case "ACTIVE":
+                tokenStorage.saveRegistration(deviceId, response.userId);
+                String safeUserId = escapeJs(response.userId != null ? response.userId : "");
+                callJs("onStatusActive('" + safeUserId + "')");
+
+                // 2초 후 LoginActivity 자동 이동
+                pendingNavigation = () -> {
+                    if (!isFinishing()) {
+                        startActivity(new Intent(MainActivity.this, LoginActivity.class));
+                        finish();
+                    }
+                };
+                mainHandler.postDelayed(pendingNavigation, BiometricLibConstants.UI_REDIRECT_DELAY_LONG_MS);
+                break;
+
+            case "LOCKED":
+                pendingDeviceId = deviceId;
+                pendingUserId   = response.userId;
+                String safeLockedUserId = escapeJs(response.userId != null ? response.userId : "");
+                callJs("onStatusLocked('" + safeLockedUserId + "')");
+                break;
+
+            case "KEY_INVALIDATED":
+                // 완전히 Native에서 처리 — AlertDialog 표시
+                callJs("onStatusKeyInvalidated()");
+                showKeyInvalidatedDialog(response.userId, deviceId);
+                break;
+
+            default:
+                callJs("onStatusError('" + escapeJs("알 수 없는 상태: " + status) + "')");
+                break;
+        }
+    }
+
+    private void navigateToRegister(String deviceId) {
+        Intent intent = new Intent(this, RegisterActivity.class);
+        intent.putExtra("device_id", deviceId);
+        intent.putExtra("button_label", "사용자ID 및 기기 등록");
+        startActivity(intent);
+        finish();
+    }
+
+    /* =========================================================
+       JavascriptInterface 브릿지
+       ========================================================= */
+
+    private class MainBridge {
+
+        /**
+         * JS: {@code Android.submitLockedLogin(password)}
+         * LOCKED 상태에서 비밀번호 입력 후 로그인 버튼 클릭 시 호출.
+         *
+         * @param password JS에서 전달받은 비밀번호 (PoC: 실제 검증 없이 unlock 호출)
+         */
+        @JavascriptInterface
+        public void submitLockedLogin(String password) {
+            String deviceId = pendingDeviceId;
+            String userId   = pendingUserId;
+
+            if (deviceId == null || userId == null) {
+                runOnUiThread(() -> callJs("onUnlockFailed('내부 오류: 단말 정보가 없습니다.')"));
+                return;
+            }
+
+            BiometricApplication.getExecutor().submit(() -> {
+                try {
+                    // TODO: [실서비스] MIS 인증 서버에서 ID/PW 검증 후 unlock 신호 전송
+                    BiometricApplication.getAuthApiClient().unlockDevice(deviceId);
+                    tokenStorage.saveRegistration(deviceId, userId);
+
+                    runOnUiThread(() -> {
+                        Toast.makeText(MainActivity.this, "잠금이 해제되었습니다.", Toast.LENGTH_SHORT).show();
+                        callJs("onUnlockSuccess()");
+
+                        // 2초 후 LoginActivity 이동
+                        pendingNavigation = () -> {
+                            if (!isFinishing()) {
+                                startActivity(new Intent(MainActivity.this, LoginActivity.class));
+                                finish();
+                            }
+                        };
+                        mainHandler.postDelayed(pendingNavigation, BiometricLibConstants.UI_REDIRECT_DELAY_LONG_MS);
+                    });
+                } catch (DeviceNotFoundException e) {
+                    runOnUiThread(() -> callJs("onUnlockFailed('기기를 찾을 수 없습니다.')"));
+                } catch (Exception e) {
+                    String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                    runOnUiThread(() -> callJs("onUnlockFailed('" + escapeJs(msg) + "')"));
+                }
+            });
+        }
+
+        /**
+         * JS: {@code Android.openUserChangeDialog()}
+         * ACTIVE 상태의 담당자 변경 버튼 클릭 시 호출.
+         */
+        @JavascriptInterface
+        public void openUserChangeDialog() {
+            runOnUiThread(() -> showUserChangeDialog());
+        }
+    }
+
+    /* =========================================================
+       Native AlertDialog — 복잡한 인터랙션은 Native에서 처리
+       ========================================================= */
+
+    /** KEY_INVALIDATED: 새 얼굴 등록 감지 → 키 삭제 후 RegisterActivity 이동 */
+    private void showKeyInvalidatedDialog(String userId, String deviceId) {
+        if (isFinishing()) return;
+        new AlertDialog.Builder(this)
+                .setTitle("보안 알림")
+                .setMessage("새로운 얼굴 등록이 감지되었습니다.\n기존 사용자 정보를 제거하고 재등록을 진행하시겠습니까?")
+                .setPositiveButton("신규 사용자 등록", (d, w) ->
+                        BiometricApplication.getExecutor().submit(() -> {
+                            try {
+                                // TODO: [실서비스] 보안 이벤트 서버 로그 기록, 관리자 알림 연동 검토
+                                BiometricApplication.getEcKeyManager().deleteKeyPair();
+                                tokenStorage.clearRegistration();
+                                runOnUiThread(() -> {
+                                    Intent intent = new Intent(MainActivity.this, RegisterActivity.class);
+                                    intent.putExtra("device_id", deviceId);
+                                    intent.putExtra("button_label", "사용자 변경");
+                                    startActivity(intent);
+                                    finish();
+                                });
+                            } catch (Exception e) {
+                                String msg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                                runOnUiThread(() -> callJs("onStatusError('" + escapeJs(msg) + "')"));
+                            }
+                        }))
+                .setNegativeButton("취소", (d, w) ->
+                        new AlertDialog.Builder(this)
+                                .setMessage("재등록을 완료해야 안면인식 로그인을 사용할 수 있습니다.\n앱을 종료합니다.")
+                                .setPositiveButton("확인", (d2, w2) -> finishAffinity())
+                                .show())
+                .setCancelable(false)
+                .show();
+    }
+
+    /** 담당자 변경 다이얼로그 — UserChangeHandler 플로우 실행 */
+    private void showUserChangeDialog() {
+        if (isFinishing()) return;
+        new AlertDialog.Builder(this)
+                .setTitle("담당자 변경")
+                .setMessage("이 기기에 저장된 로그인·인증 정보가 삭제됩니다.\n계속하시겠습니까?")
+                .setPositiveButton("확인", (dialog, which) -> {
+                    Log.d(TAG, "담당자 변경 확인 → 기기 자격증명 인증 시작");
+                    userChangeHandler.verifyDeviceCredential(
+                            this,
+                            new UserChangeHandler.UserChangeCallback() {
+
+                                @Override
+                                public void onVerified() {
+                                    callJs("onStatusLoading()");
+                                    userChangeHandler.executeChange(MainActivity.this, this);
+                                }
+
+                                @Override
+                                public void onChangeCompleted() {
+                                    Log.d(TAG, "사용자 변경 완료 → 등록 화면 이동");
+                                    Toast.makeText(MainActivity.this,
+                                            "삭제가 완료되었습니다. 신규 등록 화면으로 이동합니다.",
+                                            Toast.LENGTH_SHORT).show();
+                                    pendingNavigation = () -> {
+                                        if (!isFinishing()) {
+                                            Intent intent = new Intent(MainActivity.this, RegisterActivity.class);
+                                            intent.putExtra("button_label", "신규 사용자 등록");
+                                            startActivity(intent);
+                                            finish();
+                                        }
+                                    };
+                                    mainHandler.postDelayed(pendingNavigation,
+                                            BiometricLibConstants.UI_REDIRECT_DELAY_MS);
+                                }
+
+                                @Override
+                                public void onChangeFailed(ErrorCode errorCode) {
+                                    Log.e(TAG, "사용자 변경 실패: " + errorCode);
+                                    Toast.makeText(MainActivity.this,
+                                            "문제가 지속되면 헬프데스크로 문의해주세요.",
+                                            Toast.LENGTH_LONG).show();
+                                    callJs("onStatusActive('" + escapeJs(
+                                            pendingUserId != null ? pendingUserId : "") + "')");
+                                }
+
+                                @Override
+                                public void onCanceled() {
+                                    Log.d(TAG, "사용자 변경 취소");
+                                }
+                            });
+                })
+                .setNegativeButton("취소", null)
+                .show();
+    }
+
+    /* =========================================================
+       유틸리티
+       ========================================================= */
+
+    /**
+     * JS 함수를 메인 스레드에서 실행.
+     * 페이지 로드 전 호출된 경우 deferredStatusCall에 저장했다가 onPageFinished 후 실행.
+     *
+     * @param jsCall 예: "onStatusActive('user01')"
+     */
+    private void callJs(String jsCall) {
+        Runnable r = () -> webView.evaluateJavascript("javascript:" + jsCall, null);
+        if (pageLoaded) {
+            runOnUiThread(r);
+        } else {
+            // 페이지 로드 완료 전이면 deferred 저장 (마지막 상태만 유지)
+            deferredStatusCall = r;
+        }
+    }
+
+    /** JS 문자열 내 작은따옴표 이스케이프 */
+    private static String escapeJs(String s) {
+        return s != null ? s.replace("'", "\\'") : "";
     }
 }

@@ -1,18 +1,18 @@
 [
     {
-        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-20:/layout-v21/notification_template_icon_group.xml",
-        "source": "com.biometric.poc.lib.biometric-lib-core-1.8.0-9:/layout-v21/notification_template_icon_group.xml"
+        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-12:/layout-v21/notification_action_tombstone.xml",
+        "source": "com.biometric.poc.lib.biometric-lib-core-1.3.2-5:/layout-v21/notification_action_tombstone.xml"
     },
     {
-        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-20:/layout-v21/notification_action.xml",
-        "source": "com.biometric.poc.lib.biometric-lib-core-1.8.0-9:/layout-v21/notification_action.xml"
+        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-12:/layout-v21/notification_template_custom_big.xml",
+        "source": "com.biometric.poc.lib.biometric-lib-core-1.3.2-5:/layout-v21/notification_template_custom_big.xml"
     },
     {
-        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-20:/layout-v21/notification_template_custom_big.xml",
-        "source": "com.biometric.poc.lib.biometric-lib-core-1.8.0-9:/layout-v21/notification_template_custom_big.xml"
+        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-12:/layout-v21/notification_template_icon_group.xml",
+        "source": "com.biometric.poc.lib.biometric-lib-core-1.3.2-5:/layout-v21/notification_template_icon_group.xml"
     },
     {
-        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-20:/layout-v21/notification_action_tombstone.xml",
-        "source": "com.biometric.poc.lib.biometric-lib-core-1.8.0-9:/layout-v21/notification_action_tombstone.xml"
+        "merged": "com.biometric.poc.lib.biometric-lib-merged_res-12:/layout-v21/notification_action.xml",
+        "source": "com.biometric.poc.lib.biometric-lib-core-1.3.2-5:/layout-v21/notification_action.xml"
     }
 ]

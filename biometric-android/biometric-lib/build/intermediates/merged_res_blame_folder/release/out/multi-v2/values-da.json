@@ -1,25 +1,8 @@
 {
     "logs": [
         {
-            "outputFile": "com.biometric.poc.lib.biometric-lib-merged_res-20:/values-da/values-da.xml",
+            "outputFile": "com.biometric.poc.lib.biometric-lib-merged_res-12:/values-da/values-da.xml",
             "map": [
-                {
-                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\45e046da69bf187f7765cc182042e3e8\\transformed\\core-1.8.0\\res\\values-da\\values-da.xml",
-                    "from": {
-                        "startLines": "2",
-                        "startColumns": "4",
-                        "startOffsets": "55",
-                        "endColumns": "100",
-                        "endOffsets": "151"
-                    },
-                    "to": {
-                        "startLines": "42",
-                        "startColumns": "4",
-                        "startOffsets": "4361",
-                        "endColumns": "100",
-                        "endOffsets": "4457"
-                    }
-                },
                 {
                     "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\465ae7475a2a9e94e0ac8f1a85c7fcaf\\transformed\\appcompat-1.2.0\\res\\values-da\\values-da.xml",
                     "from": {
@@ -35,6 +18,23 @@
                         "startOffsets": "105,205,299,415,500,600,713,791,867,958,1051,1144,1238,1332,1425,1520,1618,1709,1800,1879,1987,2094,2190,2303,2406,2507,2660,4281",
                         "endColumns": "99,93,115,84,99,112,77,75,90,92,92,93,93,92,94,97,90,90,78,107,106,95,112,102,100,152,96,79",
                         "endOffsets": "200,294,410,495,595,708,786,862,953,1046,1139,1233,1327,1420,1515,1613,1704,1795,1874,1982,2089,2185,2298,2401,2502,2655,2752,4356"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\8c661e5685fac55ac13d368e7b5f9476\\transformed\\core-1.3.2\\res\\values-da\\values-da.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "100",
+                        "endOffsets": "151"
+                    },
+                    "to": {
+                        "startLines": "42",
+                        "startColumns": "4",
+                        "startOffsets": "4361",
+                        "endColumns": "100",
+                        "endOffsets": "4457"
                     }
                 },
                 {
@@ -57,25 +57,8 @@
             ]
         },
         {
-            "outputFile": "com.biometric.poc.lib.biometric-lib-mergeReleaseResources-18:/values-da/values-da.xml",
+            "outputFile": "com.biometric.poc.lib.biometric-lib-mergeReleaseResources-10:/values-da/values-da.xml",
             "map": [
-                {
-                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\45e046da69bf187f7765cc182042e3e8\\transformed\\core-1.8.0\\res\\values-da\\values-da.xml",
-                    "from": {
-                        "startLines": "2",
-                        "startColumns": "4",
-                        "startOffsets": "55",
-                        "endColumns": "100",
-                        "endOffsets": "151"
-                    },
-                    "to": {
-                        "startLines": "42",
-                        "startColumns": "4",
-                        "startOffsets": "4361",
-                        "endColumns": "100",
-                        "endOffsets": "4457"
-                    }
-                },
                 {
                     "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\465ae7475a2a9e94e0ac8f1a85c7fcaf\\transformed\\appcompat-1.2.0\\res\\values-da\\values-da.xml",
                     "from": {
@@ -91,6 +74,23 @@
                         "startOffsets": "105,205,299,415,500,600,713,791,867,958,1051,1144,1238,1332,1425,1520,1618,1709,1800,1879,1987,2094,2190,2303,2406,2507,2660,4281",
                         "endColumns": "99,93,115,84,99,112,77,75,90,92,92,93,93,92,94,97,90,90,78,107,106,95,112,102,100,152,96,79",
                         "endOffsets": "200,294,410,495,595,708,786,862,953,1046,1139,1233,1327,1420,1515,1613,1704,1795,1874,1982,2089,2185,2298,2401,2502,2655,2752,4356"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\8c661e5685fac55ac13d368e7b5f9476\\transformed\\core-1.3.2\\res\\values-da\\values-da.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "100",
+                        "endOffsets": "151"
+                    },
+                    "to": {
+                        "startLines": "42",
+                        "startColumns": "4",
+                        "startOffsets": "4361",
+                        "endColumns": "100",
+                        "endOffsets": "4457"
                     }
                 },
                 {
