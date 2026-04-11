@@ -16,9 +16,38 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 /**
- * 동기 API 클라이언트 — 호출은 백그라운드 스레드에서 수행할 것.
+ * AuthApiClient
+ * B2 인증 서버와 통신하는 동기 방식 HTTP API 클라이언트.
  *
- * <p>TODO: [실서비스] OkHttp에 Certificate Pinning, 재시도 정책, 인터셉터(로깅 시 토큰 마스킹) 적용.
+ * <p>모든 메서드는 네트워크 I/O를 동반하므로 반드시 백그라운드 스레드에서 호출해야 합니다.
+ * UI 스레드에서 호출 시 NetworkOnMainThreadException이 발생합니다.
+ *
+ * <p>제공 API:
+ * <ul>
+ *   <li>기기 등록    — POST /api/device/register</li>
+ *   <li>기기 삭제    — DELETE /api/device/unregister</li>
+ *   <li>공개키 갱신  — PUT /api/device/renew-key</li>
+ *   <li>계정 잠금 해제 — PUT /api/device/unlock</li>
+ *   <li>챌린지 요청  — POST /api/auth/challenge</li>
+ *   <li>토큰 발급    — POST /api/auth/token</li>
+ *   <li>계정 잠금    — POST /api/auth/account-lock</li>
+ *   <li>실패 정책 조회 — GET /api/policy/failure-config</li>
+ * </ul>
+ *
+ * <p>공통 예외 처리 규칙:
+ * <ul>
+ *   <li>HTTP 404 → DeviceNotFoundException</li>
+ *   <li>HTTP 423 → AccountLockedException</li>
+ *   <li>HTTP 409 → KeyInvalidatedException (챌린지/토큰 요청 시)</li>
+ *   <li>HTTP 401 → TokenVerificationException (토큰 요청 시, errorCode 포함)</li>
+ *   <li>그 외 비성공 → RuntimeException("HTTP " + code + ": " + body)</li>
+ * </ul>
+ *
+ * <p>주의사항:
+ * <ul>
+ *   <li>SHARED_CLIENT(OkHttpClient)는 앱 전체에서 공유됨 — 연결 풀·DNS 캐시 재사용</li>
+ *   <li>TODO: [실서비스] Certificate Pinning, 재시도 정책, 토큰 마스킹 인터셉터 적용</li>
+ * </ul>
  */
 public class AuthApiClient {
 
@@ -43,6 +72,11 @@ public class AuthApiClient {
     private final OkHttpClient client;
     private final Gson gson = new Gson();
 
+    /**
+     * AuthApiClient를 초기화합니다.
+     *
+     * @param baseUrl B2 인증 서버 주소 (예: "https://auth.example.com"). 말미 슬래시는 자동 제거됩니다.
+     */
     public AuthApiClient(String baseUrl) {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         this.client = SHARED_CLIENT;
@@ -198,6 +232,16 @@ public class AuthApiClient {
         }
     }
 
+    /**
+     * 기기를 서버에 등록합니다 (POST /api/device/register).
+     *
+     * @param deviceId       기기 고유 ID
+     * @param userId         등록할 사용자 ID
+     * @param publicKeyBase64 EC 공개키 (Base64 인코딩)
+     * @param enrolledAt     등록 시각 (ISO 8601 UTC, 예: "2024-01-01T00:00:00Z")
+     * @return true이면 등록 성공, false이면 이미 등록된 기기(HTTP 409)
+     * @throws IOException 네트워크 오류 시
+     */
     public boolean registerDevice(
             String deviceId, String userId, String publicKeyBase64, String enrolledAt)
             throws IOException {
@@ -231,6 +275,14 @@ public class AuthApiClient {
         }
     }
 
+    /**
+     * 기기 키 상태를 "KEY_INVALIDATED"로 갱신합니다 (PUT /api/device/update-key).
+     * Android Keystore에서 키가 무효화된 경우 서버에 상태를 동기화할 때 사용합니다.
+     *
+     * @param deviceId 기기 ID
+     * @return true이면 갱신 성공, false이면 기기 없음(HTTP 404)
+     * @throws IOException 네트워크 오류 시
+     */
     public boolean updateKeyStatus(String deviceId) throws IOException {
         UpdateKeyRequest req = new UpdateKeyRequest();
         req.deviceId = deviceId;
@@ -295,6 +347,16 @@ public class AuthApiClient {
         }
     }
 
+    /**
+     * 서명 대상 챌린지를 서버에 요청합니다 (POST /api/auth/challenge).
+     *
+     * @param req 챌린지 요청 데이터 (deviceId, userId, clientNonce, timestamp)
+     * @return 챌린지 응답 (sessionId, serverChallenge 포함)
+     * @throws DeviceNotFoundException 기기 미등록 (HTTP 404)
+     * @throws AccountLockedException 계정 잠금 (HTTP 423)
+     * @throws KeyInvalidatedException 키 무효화 (HTTP 409)
+     * @throws IOException 네트워크 오류 시
+     */
     public ChallengeResponse getChallenge(ChallengeRequest req) throws IOException {
         HttpUrl url = requireHttpUrl(baseUrl + ApiPaths.AUTH_CHALLENGE);
         Request request =
@@ -328,6 +390,14 @@ public class AuthApiClient {
         }
     }
 
+    /**
+     * ECDSA 서명을 전송하고 액세스 토큰을 발급받습니다 (POST /api/auth/token).
+     *
+     * @param req 토큰 요청 데이터 (sessionId, deviceId, userId, ecSignature, clientNonce, timestamp)
+     * @return 토큰 응답 (accessToken, refreshToken, expiresIn 포함)
+     * @throws TokenVerificationException 서명 검증 실패 또는 세션 만료 (HTTP 401, errorCode 포함)
+     * @throws IOException 네트워크 오류 시
+     */
     public TokenResponse requestToken(TokenRequest req) throws IOException {
         HttpUrl url = requireHttpUrl(baseUrl + ApiPaths.AUTH_TOKEN);
         Request request =
@@ -360,6 +430,14 @@ public class AuthApiClient {
         }
     }
 
+    /**
+     * 서버에서 인증 실패 정책을 조회합니다 (GET /api/policy/failure-config).
+     * FailurePolicyManager에 의해 5분 단위로 캐시됩니다.
+     *
+     * @param deviceId 기기 ID (정책이 기기별로 다를 수 있음)
+     * @return 실패 정책 설정 (maxRetryBeforeLockout, lockoutSeconds, accountLockThreshold 등)
+     * @throws IOException 네트워크 오류 시
+     */
     public FailurePolicyConfig getFailurePolicy(String deviceId) throws IOException {
         HttpUrl url =
                 requireHttpUrl(baseUrl + ApiPaths.POLICY_FAILURE_CONFIG)
@@ -384,6 +462,15 @@ public class AuthApiClient {
         }
     }
 
+    /**
+     * 인증 실패 횟수 초과 시 계정 잠금을 서버에 요청합니다 (POST /api/auth/account-lock).
+     * FailurePolicyManager.shouldRequestAccountLock() 조건 충족 시 BiometricAuthManager에 의해 호출됩니다.
+     *
+     * @param deviceId 기기 ID
+     * @param userId   잠금 대상 사용자 ID
+     * @return true이면 잠금 성공
+     * @throws IOException 네트워크 오류 시
+     */
     public boolean lockAccount(String deviceId, String userId) throws IOException {
         AccountLockRequest req = new AccountLockRequest();
         req.deviceId = deviceId;
@@ -441,80 +528,86 @@ public class AuthApiClient {
         public String status;
     }
 
+    /** POST /api/auth/challenge 요청 본문 DTO. */
     public static class ChallengeRequest {
         @SerializedName("device_id")
-        public String deviceId;
+        public String deviceId;      // 기기 고유 ID
 
         @SerializedName("user_id")
-        public String userId;
+        public String userId;        // 인증 요청 사용자 ID
 
         @SerializedName("client_nonce")
-        public String clientNonce;
+        public String clientNonce;   // 재전송 공격 방지용 클라이언트 nonce (16바이트 랜덤 16진수)
 
-        public long timestamp;
+        public long timestamp;       // 요청 시각 (epoch ms, 서버 TIMESTAMP_OUT_OF_RANGE 검증 기준)
     }
 
+    /** POST /api/auth/challenge 응답 본문 DTO. */
     public static class ChallengeResponse {
         @SerializedName("session_id")
-        public String sessionId;
+        public String sessionId;       // 서버 세션 ID (토큰 요청 시 재사용)
 
         @SerializedName("server_challenge")
-        public String serverChallenge;
+        public String serverChallenge; // 서버 챌린지 값 (재전송 공격 방지용 서버 nonce)
 
         @SerializedName("expire_at")
-        public long expireAt;
+        public long expireAt;          // 챌린지 만료 시각 (epoch ms)
     }
 
+    /** POST /api/auth/token 요청 본문 DTO. */
     public static class TokenRequest {
         @SerializedName("session_id")
-        public String sessionId;
+        public String sessionId;    // 챌린지 응답에서 받은 세션 ID
 
         @SerializedName("device_id")
-        public String deviceId;
+        public String deviceId;     // 기기 ID
 
         @SerializedName("user_id")
-        public String userId;
+        public String userId;       // 사용자 ID
 
         @SerializedName("ec_signature")
-        public String ecSignature;
+        public String ecSignature;  // ECDSA SHA-256 서명값 (Base64, 민감 정보 — 로그 출력 금지)
 
         @SerializedName("client_nonce")
-        public String clientNonce;
+        public String clientNonce;  // 챌린지 요청 시 사용한 클라이언트 nonce
 
-        public long timestamp;
+        public long timestamp;      // 챌린지 요청 시각 (epoch ms)
     }
 
+    /** POST /api/auth/token 응답 본문 DTO. */
     public static class TokenResponse {
         @SerializedName("access_token")
-        public String accessToken;
+        public String accessToken;  // 발급된 액세스 토큰 (민감 정보 — 로그 출력 금지)
 
         @SerializedName("refresh_token")
-        public String refreshToken;
+        public String refreshToken; // 발급된 리프레시 토큰 (민감 정보 — 로그 출력 금지)
 
         @SerializedName("expires_in")
-        public int expiresIn;
+        public int expiresIn;       // 토큰 유효 시간(초)
     }
 
+    /** GET /api/policy/failure-config 응답 본문 DTO. */
     public static class FailurePolicyConfig {
         @SerializedName("max_retry_before_lockout")
-        public int maxRetryBeforeLockout;
+        public int maxRetryBeforeLockout;  // 일시 잠금 전 허용 실패 횟수
 
         @SerializedName("lockout_seconds")
-        public int lockoutSeconds;
+        public int lockoutSeconds;         // 일시 잠금 시간(초)
 
         @SerializedName("account_lock_threshold")
-        public int accountLockThreshold;
+        public int accountLockThreshold;   // 계정 잠금 요청 임계 실패 횟수
 
         @SerializedName("fallback_password_enabled")
-        public boolean fallbackPasswordEnabled;
+        public boolean fallbackPasswordEnabled; // ID/PW 폴백 허용 여부
     }
 
+    /** GET /api/device/user-id 응답 본문 DTO. */
     public static class DeviceStatusResponse {
         @SerializedName("user_id")
-        public String userId;
+        public String userId; // 서버에 등록된 사용자 ID
 
         @SerializedName("status")
-        public String status;
+        public String status; // 기기 상태 (예: "ACTIVE", "LOCKED", "KEY_INVALIDATED")
     }
 
     private static class RenewKeyRequest {

@@ -1,0 +1,36 @@
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'com.skens.nsms.biometric.bridge'
+    compileSdk 31
+
+    defaultConfig {
+        minSdk 23
+        targetSdk 31
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+}
+
+dependencies {
+    // [biometric-android 프로젝트 내 빌드용]
+    // AGP 제한: Library 모듈은 로컬 .aar을 fileTree로 직접 참조 불가
+    // → 같은 프로젝트 내에서는 project() 참조 사용
+    //
+    // [A2 이식 시 대체 방법]
+    // biometric-lib-release.aar, biometric-bridge-release.aar 모두
+    // A2의 app/libs/ 폴더에 배치 후 app/build.gradle에서 아래로 참조:
+    //   implementation fileTree(dir: 'libs', include: ['*.aar', '*.jar'])
+    implementation project(':biometric-lib')
+
+    implementation 'androidx.fragment:fragment:1.5.7'
+    implementation 'androidx.biometric:biometric:1.1.0'
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    compileOnly 'com.google.code.gson:gson:2.2.4'
+}

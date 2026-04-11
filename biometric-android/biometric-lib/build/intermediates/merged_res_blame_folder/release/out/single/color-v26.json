@@ -1,6 +1,6 @@
 [
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color-v26/biometric_error_color.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-biometric-1.1.0-0:/color-v26/biometric_error_color.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color-v26\\biometric_error_color.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ce1c1d48359183c8a5ccb1ecbb497937\\transformed\\biometric-1.1.0\\res\\color-v26\\biometric_error_color.xml"
     }
 ]

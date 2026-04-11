@@ -23,11 +23,24 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 
 /**
- * CASE6 (INVALID_SIGNATURE), CASE10 (KEY_INVALIDATED) 공통 처리.
+ * KeyRenewalHandler
+ * CASE 6(INVALID_SIGNATURE 임계치 초과), CASE 10(KEY_INVALIDATED) 공통 키 재발급 처리 클래스.
  *
- * <p>흐름: 키 재발급 → 서버 공개키 갱신 → Challenge 재요청 → BiometricPrompt 재실행.
+ * <p>책임:
+ * <ol>
+ *   <li>기존 EC 키쌍 삭제 (EcKeyManager 위임)</li>
+ *   <li>새 EC 키쌍 생성 (EcKeyManager 위임)</li>
+ *   <li>서버 공개키 갱신 (PUT /api/device/renew-key)</li>
+ *   <li>새 챌린지 요청 → BiometricPrompt 재실행</li>
+ *   <li>재인증 후 토큰 발급 → 원래 AuthCallback으로 결과 전달</li>
+ * </ol>
  *
- * <p>TODO: [실서비스] 키 재발급 이력 서버 로그 기록 추가
+ * <p>주의사항:
+ * <ul>
+ *   <li>renewAndRetry()는 반드시 UI 스레드에서 호출해야 함 (내부적으로 executor에 위임)</li>
+ *   <li>키 재발급 완료 후 BiometricPrompt를 다시 표시하므로 Activity가 살아있어야 함</li>
+ *   <li>TODO: [실서비스] 키 재발급 이력을 서버에 기록하는 로직 추가</li>
+ * </ul>
  */
 public class KeyRenewalHandler {
 
@@ -60,12 +73,31 @@ public class KeyRenewalHandler {
         this.executor = executor;
     }
 
+    /**
+     * 키 재발급 후 인증을 재시도합니다 (CASE 6 / CASE 10 공통 진입점).
+     *
+     * <p>호출 스레드: UI 스레드 (BiometricAuthManager 또는 BiometricAuthManager.startRenewal에서 호출)
+     * <p>내부 처리: executor 백그라운드 스레드에서 키 삭제·생성·서버 갱신·챌린지 요청 수행
+     *
+     * @param activity         현재 활성 FragmentActivity (키 재발급 후 BiometricPrompt 재표시용)
+     * @param deviceId         기기 ID
+     * @param userId           사용자 ID
+     * @param originalCallback 키 재발급 후 재인증 결과를 받을 원래 콜백 — UI 스레드에서 호출됨
+     *
+     * <p>예외 처리:
+     * <ul>
+     *   <li>DeviceNotFoundException → onError(DEVICE_NOT_FOUND)</li>
+     *   <li>AccountLockedException → onAccountLocked()</li>
+     *   <li>그 외 → onError(NETWORK_ERROR)</li>
+     * </ul>
+     */
     public void renewAndRetry(
             FragmentActivity activity,
             String deviceId,
             String userId,
             BiometricAuthManager.AuthCallback originalCallback) {
 
+        Log.w("BIOMETRIC_LIB", "[KEY] KeyRenewalHandler > renewAndRetry : 키 재발급 시작");
         // TODO: [실서비스] device_id 마스킹 처리 필요
         Log.w(TAG, "키 재발급 시작 deviceId=" + deviceId);
 
@@ -77,6 +109,7 @@ public class KeyRenewalHandler {
                 } catch (Exception ignored) {
                 }
                 Log.d(TAG, "기존 키 삭제 완료");
+                Log.w("BIOMETRIC_LIB", "[KEY] KeyRenewalHandler > deleteKeyPair : 기존 키 삭제 완료");
 
                 // ② 새 EC 키쌍 생성
                 ecKeyManager.generateKeyPair();
@@ -88,6 +121,7 @@ public class KeyRenewalHandler {
                 // ④ 서버 공개키 갱신
                 authApiClient.renewKey(deviceId, newPublicKey);
                 Log.d(TAG, "서버 공개키 갱신 완료");
+                Log.w("BIOMETRIC_LIB", "[KEY] KeyRenewalHandler > renewKey : 서버 공개키 갱신 완료");
 
                 // ⑤ 새 Challenge 요청
                 String clientNonce = generateNonce();
@@ -132,6 +166,12 @@ public class KeyRenewalHandler {
         });
     }
 
+    /**
+     * 키 재발급 완료 후 BiometricPrompt를 다시 표시합니다.
+     *
+     * <p>호출 스레드: UI 스레드 (activity.runOnUiThread에서 호출됨)
+     * <p>인증 성공 시 executor 백그라운드 스레드에서 서명·토큰 요청을 수행합니다.
+     */
     private void showBiometricPromptForRenewal(
             FragmentActivity activity,
             byte[] payload,
@@ -217,6 +257,12 @@ public class KeyRenewalHandler {
         biometricPrompt.authenticate(promptInfo);
     }
 
+    /**
+     * 16바이트 랜덤 nonce를 16진수 문자열(32자)로 생성합니다.
+     * 재전송 공격 방지를 위해 챌린지 요청마다 새로 생성합니다.
+     *
+     * @return 32자 16진수 소문자 nonce 문자열
+     */
     private String generateNonce() {
         byte[] bytes = new byte[BiometricLibConstants.NONCE_BYTE_SIZE];
         secureRandom.nextBytes(bytes);
@@ -227,6 +273,16 @@ public class KeyRenewalHandler {
         return sb.toString();
     }
 
+    /**
+     * ECDSA 서명 대상 페이로드를 생성합니다.
+     * 형식: "serverChallenge:clientNonce:deviceId:timestamp" (UTF-8 인코딩)
+     *
+     * @param serverChallenge 서버 챌린지 값
+     * @param clientNonce     클라이언트 nonce
+     * @param deviceId        기기 ID
+     * @param timestamp       타임스탬프 (epoch ms)
+     * @return UTF-8 인코딩된 서명 대상 바이트 배열
+     */
     private byte[] buildPayload(
             String serverChallenge,
             String clientNonce,

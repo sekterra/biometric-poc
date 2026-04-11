@@ -1,22 +1,22 @@
 [
     {
-        "merged": "com.biometric.poc.demo.biometric-demo-app-merged_res-33:/layout_activity_login.xml.flat",
-        "source": "com.biometric.poc.demo.biometric-demo-app-main-35:/layout/activity_login.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-demo-app\\build\\intermediates\\merged_res\\debug\\layout_activity_register.xml.flat",
+        "source": "C:\\biometric-poc\\biometric-android\\biometric-demo-app\\src\\main\\res\\layout\\activity_register.xml"
     },
     {
-        "merged": "com.biometric.poc.demo.biometric-demo-app-merged_res-33:/layout_activity_main_after_login.xml.flat",
-        "source": "com.biometric.poc.demo.biometric-demo-app-main-35:/layout/activity_main_after_login.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-demo-app\\build\\intermediates\\merged_res\\debug\\layout_activity_login.xml.flat",
+        "source": "C:\\biometric-poc\\biometric-android\\biometric-demo-app\\src\\main\\res\\layout\\activity_login.xml"
     },
     {
-        "merged": "com.biometric.poc.demo.biometric-demo-app-merged_res-33:/layout_activity_register.xml.flat",
-        "source": "com.biometric.poc.demo.biometric-demo-app-main-35:/layout/activity_register.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-demo-app\\build\\intermediates\\merged_res\\debug\\xml_network_security_config.xml.flat",
+        "source": "C:\\biometric-poc\\biometric-android\\biometric-demo-app\\src\\main\\res\\xml\\network_security_config.xml"
     },
     {
-        "merged": "com.biometric.poc.demo.biometric-demo-app-merged_res-33:/xml_network_security_config.xml.flat",
-        "source": "com.biometric.poc.demo.biometric-demo-app-main-35:/xml/network_security_config.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-demo-app\\build\\intermediates\\merged_res\\debug\\layout_activity_main.xml.flat",
+        "source": "C:\\biometric-poc\\biometric-android\\biometric-demo-app\\src\\main\\res\\layout\\activity_main.xml"
     },
     {
-        "merged": "com.biometric.poc.demo.biometric-demo-app-merged_res-33:/layout_activity_main.xml.flat",
-        "source": "com.biometric.poc.demo.biometric-demo-app-main-35:/layout/activity_main.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-demo-app\\build\\intermediates\\merged_res\\debug\\layout_activity_main_after_login.xml.flat",
+        "source": "C:\\biometric-poc\\biometric-android\\biometric-demo-app\\src\\main\\res\\layout\\activity_main_after_login.xml"
     }
 ]

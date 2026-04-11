@@ -1,6 +1,6 @@
 [
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/anim-v21/fragment_fast_out_extra_slow_in.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-fragment-1.4.1-8:/anim-v21/fragment_fast_out_extra_slow_in.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\anim-v21\\fragment_fast_out_extra_slow_in.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\5a7cbfdea98dd0b166998ce154aecf2b\\transformed\\fragment-1.5.7\\res\\anim-v21\\fragment_fast_out_extra_slow_in.xml"
     }
 ]

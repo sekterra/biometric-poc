@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.skcc.biometric.lib.biometric-lib-mergeReleaseResources-10:/values-watch-v20/values-watch-v20.xml",
+            "outputFile": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\values-watch-v20\\values-watch-v20.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\465ae7475a2a9e94e0ac8f1a85c7fcaf\\transformed\\appcompat-1.2.0\\res\\values-watch-v20\\values-watch-v20.xml",
+                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\values-watch-v20\\values-watch-v20.xml",
                     "from": {
                         "startLines": "2,5,8",
                         "startColumns": "4,4,4",
@@ -17,10 +17,10 @@
             ]
         },
         {
-            "outputFile": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/values-watch-v20/values-watch-v20.xml",
+            "outputFile": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\incremental\\mergeReleaseResources\\merged.dir\\values-watch-v20\\values-watch-v20.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\465ae7475a2a9e94e0ac8f1a85c7fcaf\\transformed\\appcompat-1.2.0\\res\\values-watch-v20\\values-watch-v20.xml",
+                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\values-watch-v20\\values-watch-v20.xml",
                     "from": {
                         "startLines": "2,5,8",
                         "startColumns": "4,4,4",

@@ -2,13 +2,24 @@
 manifest
 ADDED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml:2:1-13
 INJECTED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml:2:1-13
+INJECTED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml:2:1-13
 	package
 		INJECTED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml
+		ADDED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml:2:1-13
+		INJECTED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml
+	xmlns:android
+		ADDED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml:2:1-13
 uses-sdk
 INJECTED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml
 INJECTED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml
+INJECTED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml
+INJECTED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml
 	android:targetSdkVersion
 		INJECTED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml
+		ADDED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml
+		INJECTED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml
 	android:minSdkVersion
+		INJECTED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml
+		ADDED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml
 		INJECTED from C:\biometric-poc\biometric-android\biometric-lib\src\main\AndroidManifest.xml

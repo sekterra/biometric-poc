@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>안면인식 등록</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Malgun Gothic', sans-serif;
+      background: #fff;
+      min-height: 100vh;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── 헤더 ── */
+    .title {
+      font-size: 24px;
+      font-weight: bold;
+      color: #6200EE;
+      margin-top: 32px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .face-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .guide-text {
+      font-size: 14px;
+      color: #666;
+      text-align: center;
+      margin-bottom: 32px;
+      white-space: pre-line;
+    }
+
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: #E0E0E0;
+      margin-bottom: 24px;
+    }
+
+    /* ── 입력 필드 ── */
+    .field-wrap {
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    .field-label {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+
+    .field-value {
+      font-size: 14px;
+      color: #333;
+      word-break: break-all;
+    }
+
+    .field-input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .field-input:focus { outline: none; border-color: #6200EE; }
+
+    /* ── 등록 버튼 ── */
+    #btnRegister {
+      width: 100%;
+      padding: 14px;
+      background: #6200EE;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 16px;
+      transition: opacity 0.2s;
+    }
+    #btnRegister:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── 로딩 ── */
+    #progress {
+      display: none;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .spinner {
+      display: inline-block;
+      width: 32px;
+      height: 32px;
+      border: 3px solid #e0e0e0;
+      border-top-color: #6200EE;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── 상태 메시지 ── */
+    #tvStatus {
+      display: none;
+      text-align: center;
+      font-size: 14px;
+      margin-top: 4px;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="title">MIS 생체인증 PoC</div>
+  <div class="face-icon">&#128100;</div>
+  <div class="guide-text">헬멧·장갑 착용 상태에서도 안면인식으로&#10;간편하게 로그인할 수 있습니다</div>
+  <div class="divider"></div>
+
+  <!-- 단말기 ID (읽기 전용) -->
+  <div class="field-wrap">
+    <div class="field-label">단말기 ID</div>
+    <div class="field-value" id="tvDeviceId"></div>
+  </div>
+
+  <!-- 사용자 ID — userId 있으면 텍스트, 없으면 입력 필드 표시 -->
+  <div class="field-wrap">
+    <div class="field-label">사용자 ID</div>
+    <div class="field-value" id="tvUserId" style="display:none"></div>
+    <input id="etUserId" class="field-input" type="text"
+           placeholder="사용자 ID를 입력하세요" style="display:none" />
+  </div>
+
+  <!-- 등록 버튼 -->
+  <button id="btnRegister" onclick="startRegister()">안면인식 등록 시작</button>
+
+  <!-- 로딩 -->
+  <div id="progress"><div class="spinner"></div></div>
+
+  <!-- 상태 메시지 -->
+  <div id="tvStatus"></div>
+
+  <script>
+    var knownUserId = '';   // Intent extra로 받은 userId (있으면 입력 불필요)
+
+    /* =========================================================
+       페이지 초기화 — onPageFinished에서 호출
+       ========================================================= */
+
+    /**
+     * Native → JS 초기화.
+     * @param {string} deviceId    단말기 ID
+     * @param {string} userId      Intent Extra의 사용자 ID (없으면 빈 문자열)
+     * @param {string} buttonLabel 등록 버튼 레이블
+     */
+    function initPage(deviceId, userId, buttonLabel) {
+      document.getElementById('tvDeviceId').textContent = deviceId || '';
+      document.getElementById('btnRegister').textContent = buttonLabel || '안면인식 등록 시작';
+
+      knownUserId = userId || '';
+
+      if (knownUserId) {
+        // userId 이미 알고 있음 → TextView 표시, EditText 숨김
+        document.getElementById('tvUserId').textContent = knownUserId;
+        document.getElementById('tvUserId').style.display = 'block';
+        document.getElementById('etUserId').style.display = 'none';
+      } else {
+        // userId 모름 → 입력 필드 표시
+        document.getElementById('tvUserId').style.display = 'none';
+        document.getElementById('etUserId').style.display = 'block';
+      }
+    }
+
+    /* =========================================================
+       JS → Native 호출
+       ========================================================= */
+
+    /** 등록 버튼 클릭 */
+    function startRegister() {
+      var effectiveUserId = knownUserId || document.getElementById('etUserId').value.trim();
+      if (!effectiveUserId) {
+        alert('사용자 ID를 입력해주세요.');
+        return;
+      }
+      document.getElementById('btnRegister').disabled = true;
+      document.getElementById('progress').style.display = 'block';
+      document.getElementById('tvStatus').style.display = 'none';
+      // Native에서 BiometricRegistrar.register() 실행
+      Android.startRegister(effectiveUserId);
+    }
+
+    /* =========================================================
+       Native → JS 콜백
+       ========================================================= */
+
+    /** 등록 성공 */
+    function onRegisterSuccess(userId) {
+      document.getElementById('progress').style.display = 'none';
+      document.getElementById('tvStatus').textContent = '등록 완료! 사용자: ' + userId;
+      document.getElementById('tvStatus').style.color = '#4CAF50';
+      document.getElementById('tvStatus').style.display = 'block';
+    }
+
+    /**
+     * 등록 실패
+     * @param {string} errorCode AAR ErrorCode enum 이름
+     * @param {string} message   표시할 한국어 메시지
+     */
+    function onRegisterError(errorCode, message) {
+      document.getElementById('progress').style.display = 'none';
+      document.getElementById('btnRegister').disabled = false;
+      if (message) {
+        document.getElementById('tvStatus').textContent = message;
+        document.getElementById('tvStatus').style.color = '#d32f2f';
+        document.getElementById('tvStatus').style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>

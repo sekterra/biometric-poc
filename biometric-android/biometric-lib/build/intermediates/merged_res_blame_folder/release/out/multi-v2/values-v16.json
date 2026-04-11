@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.skcc.biometric.lib.biometric-lib-mergeReleaseResources-10:/values-v16/values-v16.xml",
+            "outputFile": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\values-v16\\values-v16.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\8c661e5685fac55ac13d368e7b5f9476\\transformed\\core-1.3.2\\res\\values-v16\\values-v16.xml",
+                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\360decbe727d268f6acef9d8a6b1723a\\transformed\\core-1.8.0\\res\\values-v16\\values-v16.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",
@@ -14,7 +14,7 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\465ae7475a2a9e94e0ac8f1a85c7fcaf\\transformed\\appcompat-1.2.0\\res\\values-v16\\values-v16.xml",
+                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\values-v16\\values-v16.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",
@@ -35,10 +35,10 @@
             ]
         },
         {
-            "outputFile": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/values-v16/values-v16.xml",
+            "outputFile": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\incremental\\mergeReleaseResources\\merged.dir\\values-v16\\values-v16.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\8c661e5685fac55ac13d368e7b5f9476\\transformed\\core-1.3.2\\res\\values-v16\\values-v16.xml",
+                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\360decbe727d268f6acef9d8a6b1723a\\transformed\\core-1.8.0\\res\\values-v16\\values-v16.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",
@@ -48,7 +48,7 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\465ae7475a2a9e94e0ac8f1a85c7fcaf\\transformed\\appcompat-1.2.0\\res\\values-v16\\values-v16.xml",
+                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\values-v16\\values-v16.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",

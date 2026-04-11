@@ -4,39 +4,33 @@ plugins {
 
 android {
     namespace 'com.skcc.biometric.lib'
-    // A2 최고 compileSdk(29)에 맞춤 — appcompat-resources:1.7.0 등 API 34 요구 의존성 제거
-    compileSdk 29
+    compileSdk 31
 
     defaultConfig {
         minSdk 23
-        // A2(운영 MIS 앱) minSdk 23 호환 유지
-        // 런타임에서 API 28 미만 기기 처리는 코드에서 수행
-        targetSdk 29
+        targetSdk 31
     }
 
     compileOptions {
-        // Java 9+ 소스 컴파일은 compileSdk 30 이상 필요 (AGP 제한)
-        // compileSdk 29 환경에서는 Java 8로 설정
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
 }
 
 dependencies {
-    // 생체인증 — compileSdk 29 호환 확인된 버전
+    // 생체인증
     implementation 'androidx.biometric:biometric:1.1.0'
 
     // 암호화 저장소 — Android 12+ (Samsung Knox) 호환을 위해 1.1.0-alpha06 사용
     // 1.0.0의 Tink 1.4.x는 Android 12+ Keystore 변경사항과 호환 문제 발생
-    // MasterKey.Builder는 AndroidX 라이브러리 자체 API이므로 compileSdk 29에서도 컴파일 가능
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
 
-    // Fragment — BiometricPrompt 의존, AGP 7.x 호환 안정 버전
-    implementation 'androidx.fragment:fragment:1.4.1'
+    // Fragment — BiometricPrompt 의존
+    implementation 'androidx.fragment:fragment:1.5.7'
 
-    // 네트워크 — AGP 7.x 호환 안정 버전
-    implementation 'com.squareup.okhttp3:okhttp:4.9.3'
+    // 네트워크
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
 
-    // JSON — AAR에 번들링하지 않음, 호스트 앱(A2)의 gson 2.2.4 이상 사용
-    compileOnly 'com.google.code.gson:gson:2.8.9'
+    // JSON — AAR에 번들링하지 않음, 호스트 앱(A2)의 gson 사용
+    compileOnly 'com.google.code.gson:gson:2.2.4'
 }

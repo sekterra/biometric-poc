@@ -18,6 +18,26 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 
+/**
+ * BiometricRegistrar
+ * 안면인식 기기 등록 플로우를 담당하는 클래스.
+ *
+ * <p>책임:
+ * <ol>
+ *   <li>생체인증 가용 여부 사전 확인 (canAuthenticate)</li>
+ *   <li>Android Keystore에 EC 키쌍(secp256r1) 생성 (EcKeyManager 위임)</li>
+ *   <li>서버에 기기 등록 요청 (POST /api/device/register)</li>
+ *   <li>로컬 등록 정보 저장 (TokenStorage 위임)</li>
+ *   <li>결과를 RegisterCallback으로 전달</li>
+ * </ol>
+ *
+ * <p>주의사항:
+ * <ul>
+ *   <li>register() 호출 시 살아있는 FragmentActivity를 전달해야 함</li>
+ *   <li>모든 RegisterCallback 메서드는 UI 스레드에서 호출됨</li>
+ *   <li>ioExecutor.shutdown() 호출 금지 — 외부(BiometricApplication)가 생명주기 관리</li>
+ * </ul>
+ */
 public class BiometricRegistrar {
 
     private static final String TAG = "BiometricRegistrar";
@@ -47,6 +67,26 @@ public class BiometricRegistrar {
         this.biometricManager = BiometricManager.from(this.context);
     }
 
+    /**
+     * 안면인식 기기 등록 플로우 진입점.
+     *
+     * <p>사전 조건을 확인한 뒤 EC 키쌍을 생성하고,
+     * ioExecutor 백그라운드 스레드에서 서버 등록을 수행합니다.
+     *
+     * @param activity  BiometricPrompt를 표시할 FragmentActivity (null 불가)
+     * @param deviceId  기기 고유 ID (Settings.Secure.ANDROID_ID 권장, null·빈값 불가)
+     * @param userId    등록할 사용자 ID (null·빈값 불가)
+     * @param callback  등록 결과 수신 콜백 — 모든 메서드는 UI 스레드에서 호출됨
+     *
+     * <p>흐름:
+     * <ol>
+     *   <li>API 28 미만 → onError(BIOMETRIC_HW_UNAVAILABLE) 즉시 반환</li>
+     *   <li>deviceId/userId 유효성 검사 → onError(UNKNOWN_ERROR)</li>
+     *   <li>canAuthenticate() 실패 → onError 반환</li>
+     *   <li>EC 키쌍 생성 (이미 있으면 생략) → onError(UNKNOWN_ERROR)</li>
+     *   <li>ioExecutor에서 runRegisterNetwork() 실행</li>
+     * </ol>
+     */
     public void register(
             FragmentActivity activity,
             String deviceId,
@@ -72,6 +112,7 @@ public class BiometricRegistrar {
         }
         final String uid = userId.trim();
         final String did = deviceId.trim();
+        Log.d("BIOMETRIC_LIB", "[REG] BiometricRegistrar > register : 등록 시작 deviceId=" + (did.length() >= 4 ? did.substring(0, 4) : did) + "****");
 
         int canAuth = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK);
         if (canAuth == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED) {
@@ -86,6 +127,7 @@ public class BiometricRegistrar {
         try {
             if (!ecKeyManager.isKeyGenerated()) {
                 ecKeyManager.generateKeyPair();
+                Log.d("BIOMETRIC_LIB", "[REG] BiometricRegistrar > generateKeyPair : 키쌍 생성 완료");
             }
         } catch (Exception e) {
             Log.e(TAG, "키 생성 실패", e);
@@ -96,6 +138,18 @@ public class BiometricRegistrar {
         ioExecutor.submit(() -> runRegisterNetwork(activity, did, uid, callback));
     }
 
+    /**
+     * 백그라운드 스레드에서 실행 — 서버 기기 등록 요청 및 로컬 저장.
+     *
+     * <p>호출 스레드: ioExecutor (백그라운드)
+     * <p>결과 전달: activity.runOnUiThread()를 통해 UI 스레드에서 콜백 호출
+     *
+     * <p>예외 처리:
+     * <ul>
+     *   <li>서버 응답 false(409) → onError(ALREADY_REGISTERED)</li>
+     *   <li>그 외 네트워크 오류  → onError(NETWORK_ERROR)</li>
+     * </ul>
+     */
     private void runRegisterNetwork(
             FragmentActivity activity, String deviceId, String userId, RegisterCallback callback) {
         try {
@@ -103,17 +157,21 @@ public class BiometricRegistrar {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
             sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
             String enrolledAt = sdf.format(new Date());
+            Log.d("BIOMETRIC_LIB", "[REG] BiometricRegistrar > registerDevice : 서버 등록 요청");
             boolean registered =
                     authApiClient.registerDevice(
                             deviceId, userId, publicKeyBase64, enrolledAt);
             if (!registered) {
+                Log.e("BIOMETRIC_LIB", "[REG] BiometricRegistrar > onError : 등록 실패 errorCode=" + ErrorCode.ALREADY_REGISTERED.name());
                 activity.runOnUiThread(() -> callback.onError(ErrorCode.ALREADY_REGISTERED));
                 return;
             }
             tokenStorage.saveRegistration(deviceId, userId);
+            Log.d("BIOMETRIC_LIB", "[REG] BiometricRegistrar > onSuccess : 등록 완료 userId=" + userId);
             activity.runOnUiThread(() -> callback.onSuccess(userId));
         } catch (Exception e) {
             Log.e(TAG, "기기 등록 실패", e);
+            Log.e("BIOMETRIC_LIB", "[REG] BiometricRegistrar > onError : 등록 실패 errorCode=" + ErrorCode.NETWORK_ERROR.name());
             activity.runOnUiThread(() -> callback.onError(ErrorCode.NETWORK_ERROR));
         }
     }
@@ -126,11 +184,26 @@ public class BiometricRegistrar {
         Log.d(TAG, "shutdown() 호출 — executor는 BiometricApplication이 관리");
     }
 
+    /**
+     * BiometricRegistrar 등록 결과 콜백 인터페이스.
+     *
+     * <p>모든 메서드는 UI 스레드에서 호출됩니다.
+     */
     public interface RegisterCallback {
 
+        /**
+         * 등록 성공.
+         *
+         * @param userId 등록된 사용자 ID
+         */
         void onSuccess(String userId);
 
-        /** onNotEnrolled() 제거 — onError(ErrorCode.BIOMETRIC_NONE_ENROLLED)로 통합 */
+        /**
+         * 등록 실패.
+         * onNotEnrolled()는 이 메서드로 통합됨 (errorCode=BIOMETRIC_NONE_ENROLLED).
+         *
+         * @param errorCode 실패 원인 코드 (ALREADY_REGISTERED, NETWORK_ERROR 등)
+         */
         void onError(ErrorCode errorCode);
     }
 }

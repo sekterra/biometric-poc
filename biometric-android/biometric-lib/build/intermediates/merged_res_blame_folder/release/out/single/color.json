@@ -1,54 +1,54 @@
 [
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color/abc_primary_text_material_light.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color/abc_primary_text_material_light.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color\\abc_hint_foreground_material_light.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color\\abc_hint_foreground_material_light.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color/abc_secondary_text_material_light.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color/abc_secondary_text_material_light.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color\\abc_hint_foreground_material_dark.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color\\abc_hint_foreground_material_dark.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color/switch_thumb_material_dark.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color/switch_thumb_material_dark.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color\\abc_secondary_text_material_light.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color\\abc_secondary_text_material_light.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color/abc_background_cache_hint_selector_material_dark.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color/abc_background_cache_hint_selector_material_dark.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color\\abc_primary_text_disable_only_material_dark.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color\\abc_primary_text_disable_only_material_dark.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color/abc_primary_text_disable_only_material_light.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color/abc_primary_text_disable_only_material_light.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color\\switch_thumb_material_light.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color\\switch_thumb_material_light.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color/switch_thumb_material_light.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color/switch_thumb_material_light.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color\\abc_primary_text_disable_only_material_light.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color\\abc_primary_text_disable_only_material_light.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color/abc_hint_foreground_material_light.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color/abc_hint_foreground_material_light.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color\\abc_background_cache_hint_selector_material_dark.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color\\abc_background_cache_hint_selector_material_dark.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color/abc_primary_text_disable_only_material_dark.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color/abc_primary_text_disable_only_material_dark.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color\\abc_primary_text_material_dark.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color\\abc_primary_text_material_dark.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color/abc_primary_text_material_dark.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color/abc_primary_text_material_dark.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color\\abc_background_cache_hint_selector_material_light.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color\\abc_background_cache_hint_selector_material_light.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color/abc_hint_foreground_material_dark.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color/abc_hint_foreground_material_dark.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color\\abc_search_url_text.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color\\abc_search_url_text.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color/abc_background_cache_hint_selector_material_light.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color/abc_background_cache_hint_selector_material_light.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color\\switch_thumb_material_dark.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color\\switch_thumb_material_dark.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color/abc_secondary_text_material_dark.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color/abc_secondary_text_material_dark.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color\\abc_secondary_text_material_dark.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color\\abc_secondary_text_material_dark.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color/abc_search_url_text.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color/abc_search_url_text.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color\\abc_primary_text_material_light.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color\\abc_primary_text_material_light.xml"
     }
 ]

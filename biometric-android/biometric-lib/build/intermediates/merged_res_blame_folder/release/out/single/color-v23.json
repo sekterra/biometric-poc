@@ -1,38 +1,38 @@
 [
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color-v23/abc_tint_edittext.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color-v23/abc_tint_edittext.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color-v23\\abc_tint_btn_checkable.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color-v23\\abc_tint_btn_checkable.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color-v23/abc_tint_default.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color-v23/abc_tint_default.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color-v23\\abc_btn_colored_borderless_text_material.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color-v23\\abc_btn_colored_borderless_text_material.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color-v23/abc_btn_colored_borderless_text_material.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color-v23/abc_btn_colored_borderless_text_material.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color-v23\\abc_tint_spinner.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color-v23\\abc_tint_spinner.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color-v23/abc_tint_switch_track.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color-v23/abc_tint_switch_track.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color-v23\\abc_btn_colored_text_material.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color-v23\\abc_btn_colored_text_material.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color-v23/abc_tint_btn_checkable.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color-v23/abc_tint_btn_checkable.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color-v23\\abc_tint_edittext.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color-v23\\abc_tint_edittext.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color-v23/abc_tint_spinner.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color-v23/abc_tint_spinner.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color-v23\\abc_tint_seek_thumb.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color-v23\\abc_tint_seek_thumb.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color-v23/abc_btn_colored_text_material.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color-v23/abc_btn_colored_text_material.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color-v23\\abc_tint_switch_track.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color-v23\\abc_tint_switch_track.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color-v23/abc_tint_seek_thumb.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color-v23/abc_tint_seek_thumb.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color-v23\\abc_tint_default.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color-v23\\abc_tint_default.xml"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/color-v23/abc_color_highlight_material.xml",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/color-v23/abc_color_highlight_material.xml"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\color-v23\\abc_color_highlight_material.xml",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\color-v23\\abc_color_highlight_material.xml"
     }
 ]

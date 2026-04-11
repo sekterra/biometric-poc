@@ -1,14 +1,14 @@
 [
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/drawable-ldrtl-xxhdpi-v17/abc_spinner_mtrl_am_alpha.9.png",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/drawable-ldrtl-xxhdpi-v17/abc_spinner_mtrl_am_alpha.9.png"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\drawable-ldrtl-xxhdpi-v17\\abc_ic_menu_cut_mtrl_alpha.png",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\drawable-ldrtl-xxhdpi-v17\\abc_ic_menu_cut_mtrl_alpha.png"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/drawable-ldrtl-xxhdpi-v17/abc_ic_menu_copy_mtrl_am_alpha.png",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/drawable-ldrtl-xxhdpi-v17/abc_ic_menu_copy_mtrl_am_alpha.png"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\drawable-ldrtl-xxhdpi-v17\\abc_ic_menu_copy_mtrl_am_alpha.png",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\drawable-ldrtl-xxhdpi-v17\\abc_ic_menu_copy_mtrl_am_alpha.png"
     },
     {
-        "merged": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/drawable-ldrtl-xxhdpi-v17/abc_ic_menu_cut_mtrl_alpha.png",
-        "source": "com.skcc.biometric.lib.biometric-lib-appcompat-1.2.0-3:/drawable-ldrtl-xxhdpi-v17/abc_ic_menu_cut_mtrl_alpha.png"
+        "merged": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\drawable-ldrtl-xxhdpi-v17\\abc_spinner_mtrl_am_alpha.9.png",
+        "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\drawable-ldrtl-xxhdpi-v17\\abc_spinner_mtrl_am_alpha.9.png"
     }
 ]

@@ -1,16 +1,16 @@
 {
     "logs": [
         {
-            "outputFile": "com.biometric.poc.demo.biometric-demo-app-mergeDebugResources-31:/values-h320dp-port-v13/values-h320dp-port-v13.xml",
+            "outputFile": "C:\\biometric-poc\\biometric-android\\biometric-demo-app\\build\\intermediates\\incremental\\mergeDebugResources\\merged.dir\\values-h320dp-port-v13\\values-h320dp-port-v13.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\3e57dcd8b556ed36db83311191f6b3fb\\transformed\\material-1.12.0\\res\\values-h320dp-port-v13\\values-h320dp-port-v13.xml",
+                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\abb8004996e8d7d21a0f30141e152fb1\\transformed\\material-1.4.0\\res\\values-h320dp-port-v13\\values-h320dp-port-v13.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",
                         "startOffsets": "55",
-                        "endColumns": "63",
-                        "endOffsets": "114"
+                        "endColumns": "75",
+                        "endOffsets": "126"
                     }
                 }
             ]

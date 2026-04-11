@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.skcc.biometric.lib.biometric-lib-merged_res-12:/values-v28/values-v28.xml",
+            "outputFile": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\incremental\\mergeReleaseResources\\merged.dir\\values-v28\\values-v28.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\465ae7475a2a9e94e0ac8f1a85c7fcaf\\transformed\\appcompat-1.2.0\\res\\values-v28\\values-v28.xml",
+                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\values-v28\\values-v28.xml",
                     "from": {
                         "startLines": "2,3,4,8",
                         "startColumns": "4,4,4,4",
@@ -12,23 +12,15 @@
                         "endLines": "2,3,7,11",
                         "endColumns": "74,86,12,12",
                         "endOffsets": "125,212,442,684"
-                    },
-                    "to": {
-                        "startLines": "2,3,4,8",
-                        "startColumns": "4,4,4,4",
-                        "startOffsets": "55,130,217,397",
-                        "endLines": "2,3,7,11",
-                        "endColumns": "74,86,12,12",
-                        "endOffsets": "125,212,392,584"
                     }
                 }
             ]
         },
         {
-            "outputFile": "com.skcc.biometric.lib.biometric-lib-mergeReleaseResources-10:/values-v28/values-v28.xml",
+            "outputFile": "C:\\biometric-poc\\biometric-android\\biometric-lib\\build\\intermediates\\merged_res\\release\\values-v28\\values-v28.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\465ae7475a2a9e94e0ac8f1a85c7fcaf\\transformed\\appcompat-1.2.0\\res\\values-v28\\values-v28.xml",
+                    "source": "C:\\Users\\신창호부장\\.gradle\\caches\\transforms-3\\ef5f7a77047728b4e5782da805e45538\\transformed\\appcompat-1.2.0\\res\\values-v28\\values-v28.xml",
                     "from": {
                         "startLines": "2,3,4,8",
                         "startColumns": "4,4,4,4",
@@ -36,14 +28,6 @@
                         "endLines": "2,3,7,11",
                         "endColumns": "74,86,12,12",
                         "endOffsets": "125,212,442,684"
-                    },
-                    "to": {
-                        "startLines": "2,3,4,8",
-                        "startColumns": "4,4,4,4",
-                        "startOffsets": "55,130,217,397",
-                        "endLines": "2,3,7,11",
-                        "endColumns": "74,86,12,12",
-                        "endOffsets": "125,212,392,584"
                     }
                 }
             ]
