@@ -83,10 +83,12 @@ public class LoginActivity extends AppCompatActivity {
 
         // ── JavascriptInterface 브릿지 등록 ──────────────────────
         // JS에서 Android.xxx() 형태로 호출
-        // [변경] serverUrl 추가 — BiometricBridge 초기화에 사용
+        // [이전] BiometricBridge 사용 시 serverUrl 전달
+        // bridge = new AndroidBridge(
+        //         this, webView, biometricAuthManager, userChangeHandler, tokenStorage,
+        //         BuildConfig.SERVER_URL);
         bridge = new AndroidBridge(
-                this, webView, biometricAuthManager, userChangeHandler, tokenStorage,
-                BuildConfig.SERVER_URL);
+                this, webView, biometricAuthManager, userChangeHandler, tokenStorage);
         webView.addJavascriptInterface(bridge, "Android");
 
         // 로컬 HTML 파일 로드

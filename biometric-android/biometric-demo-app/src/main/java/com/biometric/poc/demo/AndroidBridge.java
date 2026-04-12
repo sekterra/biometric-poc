@@ -22,8 +22,9 @@ import com.skcc.biometric.lib.auth.BiometricAuthManager;
 import com.skcc.biometric.lib.auth.UserChangeHandler;
 import com.skcc.biometric.lib.network.AuthApiClient;
 import com.skcc.biometric.lib.storage.TokenStorage;
-import com.skens.nsms.biometric.bridge.BiometricBridge;
-import com.skens.nsms.biometric.bridge.BiometricBridgeCallback;
+// [보존] biometric-bridge 경유 시 사용 — demo-app은 lib 직접 사용으로 미참조
+// import com.skens.nsms.biometric.bridge.BiometricBridge;
+// import com.skens.nsms.biometric.bridge.BiometricBridgeCallback;
 
 /**
  * AndroidBridge
@@ -33,7 +34,7 @@ import com.skens.nsms.biometric.bridge.BiometricBridgeCallback;
  * <ul>
  *   <li>JS → Native: {@code @JavascriptInterface} 메서드로 JS 호출 수신</li>
  *   <li>Native → JS: {@link #callJs(String)}를 통해 {@code evaluateJavascript()}로 결과 전달</li>
- *   <li>BiometricBridge를 통해 인증/등록/사용자변경/잠금해제 플로우 실행</li>
+ *   <li>{@link BiometricAuthManager}·{@link UserChangeHandler}·{@link AuthApiClient}로 플로우 실행 (bridge 미경유)</li>
  *   <li>Native AlertDialog로 복잡한 인터랙션(키 무효화 안내, 기기 미등록 안내 등) 처리</li>
  * </ul>
  *
@@ -41,7 +42,7 @@ import com.skens.nsms.biometric.bridge.BiometricBridgeCallback;
  * <ul>
  *   <li>{@code Android.startFaceLogin()}     — 안면인식 로그인 시작</li>
  *   <li>{@code Android.startIdPwUnlock(userId, password)} — ID/PW로 계정 잠금 해제</li>
- *   <li>{@code Android.openUserChangeDialog()} — 담당자 변경 다이얼로그 표시</li>
+ *   <li>{@code Android.openUserChangeDialog()} / {@code Android.startUserChange()} — 담당자 변경</li>
  * </ul>
  *
  * <p>주의사항:
@@ -49,11 +50,11 @@ import com.skens.nsms.biometric.bridge.BiometricBridgeCallback;
  *   <li>{@code @JavascriptInterface} 메서드는 백그라운드 스레드(JavaBridge 스레드)에서 호출됨</li>
  *   <li>UI 작업은 반드시 {@code runOnUiThread()} 또는 {@code mainHandler.post()} 안에서 실행해야 함</li>
  *   <li>pendingNavigation, lockCountDownTimer는 onDestroy()에서 반드시 정리(cancel) 필요</li>
- *   <li>BiometricBridge 인스턴스는 Activity 생명주기와 함께 관리됨</li>
+ *   <li>BiometricAuthManager는 Activity 생명주기와 함께 관리됨</li>
  * </ul>
  *
  * <p>변경 이력:
- * BiometricBridge 경유 인증으로 전환. 기존 biometricAuthManager 직접 호출 코드는 주석 처리로 보존.
+ * demo-app은 biometric-lib 직접 사용. BiometricBridge 경유 코드는 주석 처리로 보존 (모듈은 유지).
  */
 public class AndroidBridge {
 
@@ -72,8 +73,8 @@ public class AndroidBridge {
     private final TokenStorage tokenStorage;
     // ────────────────────────────────────────────────────────────────────────
 
-    /** [신규] BiometricBridge 경유 인증/등록/사용자변경 진입점 */
-    private final BiometricBridge biometricBridge;
+    // [보존] BiometricBridge 경유 진입점 — lib 직접 사용으로 필드 미사용
+    // private final BiometricBridge biometricBridge;
 
     /** 메인 스레드 Handler — pendingNavigation 및 타이머 콜백용. */
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -98,30 +99,27 @@ public class AndroidBridge {
     /**
      * AndroidBridge를 초기화합니다.
      *
-     * <p>BiometricBridge 인스턴스를 생성하고 기존 필드(biometricAuthManager 등)를 보존합니다.
-     * KEY_INVALIDATED 다이얼로그에서 startRenewal()을 위해 biometricAuthManager를 유지합니다.
+     * <p>KEY_INVALIDATED 다이얼로그에서 startRenewal()을 위해 biometricAuthManager를 유지합니다.
      *
      * @param activity             호스팅 Activity (BiometricPrompt 및 AlertDialog 표시용)
      * @param webView              JS 통신 대상 WebView (evaluateJavascript 호출 대상)
-     * @param biometricAuthManager 기존 AuthManager — KEY_INVALIDATED 갱신 재시도용으로 보존
-     * @param userChangeHandler    기존 UserChangeHandler — showUserChangeDialog() 보존용
+     * @param biometricAuthManager AuthManager — authenticate / startRenewal
+     * @param userChangeHandler    담당자 변경 — verifyDeviceCredential / executeChange
      * @param tokenStorage         토큰/등록 저장소 — showDeviceNotFoundDialog 등에서 참조
-     * @param serverUrl            B2 인증 서버 주소 — BiometricBridge 초기화에 사용
      */
     public AndroidBridge(
             AppCompatActivity activity,
             WebView webView,
             BiometricAuthManager biometricAuthManager,
             UserChangeHandler userChangeHandler,
-            TokenStorage tokenStorage,
-            String serverUrl) {
+            TokenStorage tokenStorage) {
         this.activity = activity;
         this.webView = webView;
         this.biometricAuthManager = biometricAuthManager;
         this.userChangeHandler = userChangeHandler;
         this.tokenStorage = tokenStorage;
-        // [신규] BiometricBridge 초기화
-        this.biometricBridge = new BiometricBridge(activity, serverUrl);
+        // [보존] BiometricBridge 초기화 — serverUrl 은 bridge 전용
+        // this.biometricBridge = new BiometricBridge(activity, serverUrl);
     }
 
     /* =========================================================
@@ -134,7 +132,7 @@ public class AndroidBridge {
      * 안면인식 로그인 버튼 클릭 시 JS에서 호출됩니다.
      *
      * <p>호출 스레드: JavaBridge 백그라운드 스레드 → runOnUiThread()로 UI 작업 위임
-     * <p>BiometricBridge.startLogin(bridgeLoginCallback)으로 인증 플로우를 시작합니다.
+     * <p>{@link BiometricAuthManager#authenticate(androidx.fragment.app.FragmentActivity, BiometricAuthManager.AuthCallback)} 로 인증을 시작합니다.
      * <p>진행 중인 카운트다운 타이머가 있으면 취소 후 재시도를 허용합니다.
      */
     @JavascriptInterface
@@ -149,12 +147,12 @@ public class AndroidBridge {
                 isCountingDown = false;
             }
 
-            // ── [기존 코드 — 주석 처리] ───────────────────────────────────
-            // biometricAuthManager.authenticate(activity, authCallback);
+            // ── [보존] BiometricBridge 경유 인증 ───────────────────────────
+            // biometricBridge.startLogin(bridgeLoginCallback);
             // ─────────────────────────────────────────────────────────────
 
-            // ── [BiometricBridge 경유 인증] ───────────────────────────────
-            biometricBridge.startLogin(bridgeLoginCallback);
+            // ── biometric-lib 직접 사용 ────────────────────────────────────
+            biometricAuthManager.authenticate(activity, authCallback);
             // ─────────────────────────────────────────────────────────────
         });
     }
@@ -164,7 +162,7 @@ public class AndroidBridge {
      * ACCOUNT_LOCKED 상태(CASE 9)에서 ID/PW 입력 후 잠금 해제 요청.
      *
      * <p>호출 스레드: JavaBridge 백그라운드 스레드
-     * <p>BiometricBridge.unlockWithIdPw()로 위임합니다.
+     * <p>{@link AuthApiClient#unlockDevice(String)} 및 {@link TokenStorage}로 동일 동작 수행 (bridge 미경유).
      *
      * @param userId   입력된 사용자 ID
      * @param password 입력된 비밀번호 (민감 정보 — 로그 출력 금지)
@@ -172,24 +170,24 @@ public class AndroidBridge {
     @JavascriptInterface
     public void startIdPwUnlock(String userId, String password) {
         Log.d(TAG, "startIdPwUnlock() 호출");
-        // [신규] BiometricBridge 경유 잠금 해제
-        biometricBridge.unlockWithIdPw(userId, password, new BiometricBridgeCallback() {
-            @Override
-            public void onLoginSuccess(String uid, String token, int exp) {
-                isAccountLocked = false;
-                callJs("onUnlockSuccess()");
-            }
+        Log.d("BIOMETRIC_BRIDGE", "[BRIDGE] AndroidBridge > unlockWithIdPw : 잠금 해제 요청 수신");
+        // [보존] BiometricBridge.unlockWithIdPw(...)
+        // biometricBridge.unlockWithIdPw(userId, password, new BiometricBridgeCallback() { ... });
 
-            @Override
-            public void onError(String errorCode) {
-                callJs("onUnlockFailed()");
+        String deviceId = tokenStorage.getDeviceId();
+        BiometricApplication.getExecutor().submit(() -> {
+            try {
+                BiometricApplication.getAuthApiClient().unlockDevice(deviceId);
+                tokenStorage.saveRegistration(deviceId, userId);
+                Log.d(TAG, "unlockWithIdPw 성공: userId=" + userId);
+                activity.runOnUiThread(() -> {
+                    isAccountLocked = false;
+                    callJs("onUnlockSuccess()");
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "unlockWithIdPw 실패", e);
+                activity.runOnUiThread(() -> callJs("onUnlockFailed()"));
             }
-
-            @Override public void onRetry(int f) {}
-            @Override public void onSessionRetrying(int r, int m) {}
-            @Override public void onLockedOut(int s) {}
-            @Override public void onNotRegistered() {}
-            @Override public void onAccountLocked() {}
         });
     }
 
@@ -198,157 +196,40 @@ public class AndroidBridge {
      * 담당자 변경 다이얼로그를 표시합니다 (CASE 12).
      *
      * <p>호출 스레드: JavaBridge 백그라운드 스레드 → runOnUiThread()로 UI 작업 위임
-     * <p>showUserChangeDialogViaBridge()를 통해 BiometricBridge.startUserChange()로 위임합니다.
+     * <p>{@link UserChangeHandler} 직접 사용 — {@link #showUserChangeDialog()}.
      */
     @JavascriptInterface
     public void openUserChangeDialog() {
         activity.runOnUiThread(() -> {
-            // ── [기존 코드 — 주석 처리] ───────────────────────────────────
-            // showUserChangeDialog();
-            // ─────────────────────────────────────────────────────────────
-
-            // ── [BiometricBridge 경유 사용자 변경] ────────────────────────
-            showUserChangeDialogViaBridge();
-            // ─────────────────────────────────────────────────────────────
+            // [보존] BiometricBridge 경유
+            // showUserChangeDialogViaBridge();
+            showUserChangeDialog();
         });
     }
 
-    /* =========================================================
-       BiometricBridge 콜백 정의
-       ========================================================= */
-
     /**
-     * BiometricBridge 로그인 콜백 구현체.
-     *
-     * <p>startFaceLogin()에서 biometricBridge.startLogin(bridgeLoginCallback)으로 사용됩니다.
-     * 기존 authCallback(BiometricAuthManager 직접 연결)의 동작을 동일하게 재현합니다.
-     *
-     * <p>호출 스레드: 모든 메서드는 UI 스레드에서 호출됨
+     * JS: {@code Android.startUserChange()}
+     * 담당자 변경 — {@link UserChangeHandler} 경로와 동일.
      */
-    private final BiometricBridgeCallback bridgeLoginCallback = new BiometricBridgeCallback() {
+    @JavascriptInterface
+    public void startUserChange() {
+        openUserChangeDialog();
+    }
 
-        /** CASE 1: 인증 + 토큰 발급 성공 → JS 알림 후 MainAfterLoginActivity로 이동 */
-        @Override
-        public void onLoginSuccess(String userId, String accessToken, int expiresIn) {
-            Log.d(TAG, "bridgeLoginCallback onLoginSuccess: userId=" + userId);
-            callJs("onLoginSuccess()");
-            pendingNavigation = () -> {
-                if (!activity.isFinishing()) {
-                    Intent intent = new Intent(activity, MainAfterLoginActivity.class);
-                    intent.putExtra("user_id", userId);
-                    intent.putExtra("access_token", accessToken);
-                    intent.putExtra("expires_in", expiresIn);
-                    activity.startActivity(intent);
-                    activity.finish();
-                }
-            };
-            mainHandler.postDelayed(pendingNavigation, BiometricLibConstants.UI_REDIRECT_DELAY_MS);
-        }
-
-        /** CASE 7: 기기 미등록 → JS 알림 후 RegisterActivity로 이동 */
-        @Override
-        public void onNotRegistered() {
-            Log.d(TAG, "bridgeLoginCallback onNotRegistered");
-            isAccountLocked = false;
-            callJs("onNotRegistered()");
-            Toast.makeText(activity, "서버에 등록 정보가 없습니다. 다시 등록해주세요.",
-                    Toast.LENGTH_LONG).show();
-            pendingNavigation = () -> {
-                if (!activity.isFinishing()) {
-                    activity.startActivity(new Intent(activity, RegisterActivity.class));
-                    activity.finish();
-                }
-            };
-            mainHandler.postDelayed(pendingNavigation, BiometricLibConstants.UI_REDIRECT_DELAY_MS);
-        }
-
-        /** CASE 4: 잠금 → JS 알림 + 카운트다운 시작 */
-        @Override
-        public void onLockedOut(int remainingSeconds) {
-            Log.d(TAG, "bridgeLoginCallback onLockedOut: " + remainingSeconds + "초");
-            callJs("onLockedOut(" + remainingSeconds + ")");
-            startCountdown(remainingSeconds);
-        }
-
-        /** CASE 2: 인증 실패 (재시도 가능) → JS 알림 */
-        @Override
-        public void onRetry(int failureCount) {
-            callJs("onRetry(" + failureCount + "," + BiometricLibConstants.MAX_FAILURE_COUNT_FOR_UI + ")");
-        }
-
-        /** CASE 9: 관리자 계정 잠금 → JS ID/PW 영역 표시 */
-        @Override
-        public void onAccountLocked() {
-            Log.w(TAG, "bridgeLoginCallback onAccountLocked");
-            isAccountLocked = true;
-            callJs("onAccountLocked()");
-        }
-
-        /** CASE 3: SESSION_EXPIRED 자동 재시도 중 */
-        @Override
-        public void onSessionRetrying(int retryCount, int maxRetry) {
-            callJs("onSessionRetrying(" + retryCount + "," + maxRetry + ")");
-        }
-
-        /**
-         * 오류 — errorCode 문자열에 따라 Native 다이얼로그 또는 JS 메시지로 처리.
-         * 기존 authCallback.onError(ErrorCode) 의 switch 로직과 동일.
-         */
-        @Override
-        public void onError(String errorCode) {
-            Log.w(TAG, "bridgeLoginCallback onError: " + errorCode);
-            switch (errorCode) {
-                case "BIOMETRIC_NONE_ENROLLED":
-                    callJs("setFaceLoginEnabled(false)");
-                    showNotEnrolledDialog();
-                    break;
-                case "BIOMETRIC_HW_UNAVAILABLE":
-                    callJs("onError('생체인식 기능을 사용할 수 없습니다. 잠시 후 다시 시도해주세요.')");
-                    break;
-                case "KEY_INVALIDATED":
-                    // biometricAuthManager.startRenewal()은 기존 필드를 재사용
-                    showKeyInvalidatedDialog();
-                    break;
-                case "DEVICE_NOT_FOUND":
-                    showDeviceNotFoundDialog();
-                    break;
-                case "TIMESTAMP_OUT_OF_RANGE":
-                    showTimestampErrorDialog();
-                    break;
-                case "MISSING_SIGNATURE":
-                    showMissingSignatureDialog();
-                    break;
-                case "SESSION_EXPIRED":
-                    callJs("hideStatusMsg()");
-                    callJs("onError('네트워크 불안정 또는 인증 시간 초과입니다. 다시 시도해주세요.')");
-                    break;
-                case "NONCE_REPLAY":
-                    callJs("onError('보안 확인이 만료되었거나 중복 요청입니다. 다시 시도해주세요.')");
-                    break;
-                case "INVALID_SIGNATURE":
-                    callJs("onError('기기 인증 정보가 맞지 않습니다. 로그인을 다시 시도해주세요.')");
-                    break;
-                case "KEY_NOT_FOUND":
-                    callJs("onError('보안키를 찾을 수 없습니다. 잠시 후 다시 시도해주세요.')");
-                    break;
-                case "NETWORK_ERROR":
-                    callJs("onError('네트워크 연결을 확인 후 다시 시도해주세요.')");
-                    break;
-                default:
-                    callJs("onError('알 수 없는 오류가 발생했습니다. 앱을 재시작하거나 헬프데스크로 문의해주세요.')");
-                    break;
-            }
-        }
-    };
+    /* =========================================================
+       [보존] BiometricBridge 콜백(bridgeLoginCallback) — biometric-bridge 미의존으로 소스 제외.
+       이전 private final BiometricBridgeCallback bridgeLoginCallback = ... 전문은 Git 이력 또는
+       동일 시점의 biometric-bridge 연동 커밋에서 확인.
+       startFaceLogin()은 아래 authCallback + authenticate() 사용.
+       ========================================================= */
 
     /* =========================================================
        Native → JS : evaluateJavascript 콜백
        ========================================================= */
 
     /**
-     * [기존 코드 보존] BiometricAuthManager 인증 콜백.
-     * 현재 startFaceLogin()에서는 미사용 (bridgeLoginCallback으로 대체).
-     * showKeyInvalidatedDialog()의 startRenewal() 재시도용으로 참조 가능.
+     * BiometricAuthManager 인증 콜백 — startFaceLogin()에서 사용.
+     * showKeyInvalidatedDialog()의 startRenewal() 재시도에도 동일 인스턴스 사용.
      */
     private final BiometricAuthManager.AuthCallback authCallback =
             new BiometricAuthManager.AuthCallback() {
@@ -356,6 +237,7 @@ public class AndroidBridge {
         @Override
         public void onSuccess(String userId, AuthApiClient.TokenResponse tokenResponse) {
             Log.d(TAG, "[authCallback] onSuccess: userId=" + userId);
+            Log.d("BIOMETRIC_BRIDGE", "[BRIDGE] callback > onLoginSuccess : 로그인 성공 userId=" + userId);
             callJs("onLoginSuccess()");
             pendingNavigation = () -> {
                 if (!activity.isFinishing()) {
@@ -373,6 +255,7 @@ public class AndroidBridge {
         @Override
         public void onNotRegistered() {
             Log.d(TAG, "[authCallback] onNotRegistered");
+            Log.d("BIOMETRIC_BRIDGE", "[BRIDGE] callback > onNotRegistered");
             isAccountLocked = false;
             callJs("onNotRegistered()");
             Toast.makeText(activity, "서버에 등록 정보가 없습니다. 다시 등록해주세요.",
@@ -389,30 +272,36 @@ public class AndroidBridge {
         @Override
         public void onLockedOut(int remainingSeconds) {
             Log.d(TAG, "[authCallback] onLockedOut: " + remainingSeconds + "초");
+            Log.d("BIOMETRIC_BRIDGE", "[BRIDGE] callback > onLockedOut: " + remainingSeconds + "초");
             callJs("onLockedOut(" + remainingSeconds + ")");
             startCountdown(remainingSeconds);
         }
 
         @Override
         public void onRetry(int failureCount) {
+            Log.d("BIOMETRIC_BRIDGE", "[BRIDGE] callback > onRetry: failureCount=" + failureCount);
             callJs("onRetry(" + failureCount + "," + BiometricLibConstants.MAX_FAILURE_COUNT_FOR_UI + ")");
         }
 
         @Override
         public void onAccountLocked() {
             Log.w(TAG, "[authCallback] onAccountLocked");
+            Log.w("BIOMETRIC_BRIDGE", "[BRIDGE] callback > onAccountLocked");
             isAccountLocked = true;
             callJs("onAccountLocked()");
         }
 
         @Override
         public void onSessionRetrying(int retryCount, int maxRetry) {
+            Log.d("BIOMETRIC_BRIDGE",
+                    "[BRIDGE] callback > onSessionRetrying: " + retryCount + "/" + maxRetry);
             callJs("onSessionRetrying(" + retryCount + "," + maxRetry + ")");
         }
 
         @Override
         public void onError(ErrorCode errorCode) {
             Log.w(TAG, "[authCallback] onError: " + errorCode);
+            Log.w("BIOMETRIC_BRIDGE", "[BRIDGE] callback > onError: " + errorCode.name());
             switch (errorCode) {
                 case BIOMETRIC_NONE_ENROLLED:
                     callJs("setFaceLoginEnabled(false)");
@@ -572,63 +461,16 @@ public class AndroidBridge {
     }
 
     /**
-     * [신규] BiometricBridge 경유 담당자 변경 다이얼로그.
-     * 기존 showUserChangeDialog() 대체 — userChangeHandler 직접 호출 대신 biometricBridge.startUserChange() 사용.
+     * [보존] BiometricBridge.startUserChange() 기반 담당자 변경 — bridge 미의존 시 미호출.
+     * 동작은 {@link #showUserChangeDialog()} 와 동일 목적(UserChangeHandler).
      */
+    @SuppressWarnings("unused")
     private void showUserChangeDialogViaBridge() {
-        if (activity.isFinishing()) return;
-        new AlertDialog.Builder(activity)
-                .setTitle("담당자 변경")
-                .setMessage("이 기기에 저장된 로그인·인증 정보가 삭제됩니다.\n계속하시겠습니까?")
-                .setPositiveButton("확인", (dialog, which) -> {
-                    callJs("showProgress(true)");
-                    // ── [기존 코드 — 주석 처리] ──────────────────────────
-                    // userChangeHandler.verifyDeviceCredential(activity, ...);
-                    // ─────────────────────────────────────────────────────
-                    // ── [BiometricBridge 경유] ────────────────────────────
-                    biometricBridge.startUserChange(new BiometricBridgeCallback() {
-
-                        @Override
-                        public void onLoginSuccess(String userId, String token, int exp) {
-                            callJs("showProgress(false)");
-                            Toast.makeText(activity,
-                                    "삭제가 완료되었습니다. 신규 등록 화면으로 이동합니다.",
-                                    Toast.LENGTH_SHORT).show();
-                            pendingNavigation = () -> {
-                                if (!activity.isFinishing()) {
-                                    Intent intent = new Intent(activity, RegisterActivity.class);
-                                    intent.putExtra("button_label", "신규 사용자 등록");
-                                    activity.startActivity(intent);
-                                    activity.finish();
-                                }
-                            };
-                            mainHandler.postDelayed(pendingNavigation,
-                                    BiometricLibConstants.UI_REDIRECT_DELAY_MS);
-                        }
-
-                        @Override
-                        public void onError(String errorCode) {
-                            callJs("showProgress(false)");
-                            Toast.makeText(activity,
-                                    "문제가 지속되면 헬프데스크로 문의해주세요.",
-                                    Toast.LENGTH_LONG).show();
-                        }
-
-                        @Override public void onRetry(int f) {}
-                        @Override public void onSessionRetrying(int r, int m) {}
-                        @Override public void onLockedOut(int s) {}
-                        @Override public void onNotRegistered() {}
-                        @Override public void onAccountLocked() {}
-                    });
-                    // ─────────────────────────────────────────────────────
-                })
-                .setNegativeButton("취소", null)
-                .show();
+        // [보존] biometricBridge.startUserChange(BiometricBridgeCallback) 전문은 Git 이력 참고
     }
 
     /**
-     * [기존 코드 보존] 담당자 변경 다이얼로그 — userChangeHandler 직접 사용.
-     * openUserChangeDialog()에서는 showUserChangeDialogViaBridge()로 대체.
+     * 담당자 변경 다이얼로그 — {@link UserChangeHandler} 직접 사용.
      */
     private void showUserChangeDialog() {
         if (activity.isFinishing()) return;

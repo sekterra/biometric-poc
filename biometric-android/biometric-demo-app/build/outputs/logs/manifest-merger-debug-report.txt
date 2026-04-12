@@ -4,7 +4,6 @@ ADDED from C:\biometric-poc\biometric-android\biometric-demo-app\src\main\Androi
 INJECTED from C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:2:1-42:12
 INJECTED from C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:2:1-42:12
 INJECTED from C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml:2:1-42:12
-MERGED from [:biometric-bridge] C:\biometric-poc\biometric-android\biometric-bridge\build\intermediates\merged_manifest\debug\AndroidManifest.xml:2:1-9:12
 MERGED from [:biometric-lib] C:\biometric-poc\biometric-android\biometric-lib\build\intermediates\merged_manifest\debug\AndroidManifest.xml:2:1-9:12
 MERGED from [androidx.biometric:biometric:1.1.0] C:\Users\신창호부장\.gradle\caches\transforms-3\ce1c1d48359183c8a5ccb1ecbb497937\transformed\biometric-1.1.0\AndroidManifest.xml:17:1-29:12
 MERGED from [com.google.android.material:material:1.4.0] C:\Users\신창호부장\.gradle\caches\transforms-3\abb8004996e8d7d21a0f30141e152fb1\transformed\material-1.4.0\AndroidManifest.xml:17:1-24:12
@@ -139,8 +138,6 @@ uses-sdk
 INJECTED from C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml
 INJECTED from C:\biometric-poc\biometric-android\biometric-demo-app\src\main\AndroidManifest.xml
-MERGED from [:biometric-bridge] C:\biometric-poc\biometric-android\biometric-bridge\build\intermediates\merged_manifest\debug\AndroidManifest.xml:5:5-7:41
-MERGED from [:biometric-bridge] C:\biometric-poc\biometric-android\biometric-bridge\build\intermediates\merged_manifest\debug\AndroidManifest.xml:5:5-7:41
 MERGED from [:biometric-lib] C:\biometric-poc\biometric-android\biometric-lib\build\intermediates\merged_manifest\debug\AndroidManifest.xml:5:5-7:41
 MERGED from [:biometric-lib] C:\biometric-poc\biometric-android\biometric-lib\build\intermediates\merged_manifest\debug\AndroidManifest.xml:5:5-7:41
 MERGED from [androidx.biometric:biometric:1.1.0] C:\Users\신창호부장\.gradle\caches\transforms-3\ce1c1d48359183c8a5ccb1ecbb497937\transformed\biometric-1.1.0\AndroidManifest.xml:20:5-22:41
