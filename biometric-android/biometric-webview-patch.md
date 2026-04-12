@@ -16,7 +16,7 @@
 5. [STEP 3. alopex_blaze/build.gradle 수정](#5-step-3-alopex_blazebuildgradle-수정)
 6. [STEP 4. 민감 정보 설정](#6-step-4-민감-정보-설정)
 7. [STEP 5. AndroidBridge.java 생성 (alopex_blaze)](#7-step-5-androidbridgejava-생성-alopex_blaze)
-8. [STEP 6. DefaultAlopexWebViewScreen 수정 (alopex_blaze)](#8-step-6-defaultalopexwebviewscreen-수정-alopex_blaze)
+8. [STEP 6. AbstractBlazeWebViewDefaultContainerScreen 수정 (alopex_blaze)](#8-step-6-abstractblazewebviewdefaultcontainerscreen-수정-alopex_blaze)
 9. [STEP 7. login.html 수정](#9-step-7-loginhtml-수정)
 10. [STEP 8. Logcat 검증](#10-step-8-logcat-검증)
 11. [알려진 이슈 및 대응](#11-알려진-이슈-및-대응)
@@ -92,7 +92,7 @@
 4. **Gradle Sync**
 5. **민감 정보** — 프로젝트 루트 `biometric.properties` + `.gitignore` + `buildConfigField`
 6. **AndroidBridge.java** 생성 (`alopex_blaze`, 패키지 예: `com.skcc.alopex.v2.screen.biometric`)
-7. **DefaultAlopexWebViewScreen** — 로그인 페이지에서만 `addJavascriptInterface` 등록
+7. AbstractBlazeWebViewDefaultContainerScreen — 로그인 페이지에서만 addJavascriptInterface 등록
 8. **login.html** — 버튼·JS 콜백 함수
 9. **빌드** 후 **Logcat** 검증
 
@@ -278,6 +278,8 @@ buildFeatures {
 │   alopex_blaze/src/main/java/com/skcc/alopex/v2/screen/ │
 │   biometric/AndroidBridge.java (신규, 패키지는 팀 표준에 맞게 조정) │
 │ 수정하지 않는 모듈: app, biometric-lib                   │
+│ (AndroidBridge 생성자의 WebView 파라미터 타입은           │
+│  AlopexWebView가 아닌 WebView 사용)                      │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -787,44 +789,121 @@ public class AndroidBridge {
 
 ---
 
-## 8. STEP 6. DefaultAlopexWebViewScreen 수정 (alopex_blaze)
+## 8. STEP 6. AbstractBlazeWebViewDefaultContainerScreen 수정 (alopex_blaze)
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
 │ 수정 대상 모듈: alopex_blaze                             │
-│ 수정 대상 파일: DefaultAlopexWebViewScreen.java          │
+│ 수정 대상 파일: AbstractBlazeWebViewDefaultContainerScreen.java │
 │ 수정 범위: onCreate()에 브릿지 등록 블록 추가            │
+│            (setContentView() 및 printWebView() 직후)      │
 │ 수정하지 않는 모듈: app 및 나머지 모듈 전부              │
 └──────────────────────────────────────────────────────────┘
 ```
 
-### 주의
+### 클래스 상속 구조
 
-- 기존 **`setWebViewClient` 교체/삭제 금지** — Blaze 라우팅·로딩 정책을 깨지 않도록 **추가만** 한다.
-- **`initialize()` 직후**, **`loadUrl()` 이전**에 브릿지를 등록하는 것이 안전하다 (프로젝트 실제 생명주기에 맞게 조정).
-
-### 삽입 예시
-
-```java
-// [생체인증 브릿지 추가 시작] ─────────────────────────
-// 로그인 페이지(LOG_PAGE_ID)인 경우에만 브릿지 등록 — 다른 WebView 화면에는 부착하지 않음
-String pageId = getIntent().getStringExtra(PageManager.KEY_NAV_ID);
-if (PageManager.LOG_PAGE_ID.equals(pageId)) {
-    AlopexWebView pageWebView =
-            BlazePageManager.WebViewHandler.instance().getPageWebView();
-    if (pageWebView != null) {
-        // 기존 "Android" 인터페이스와 충돌 시 이름을 "BiometricAndroid" 로 바꾸고 login.html 도 동일하게 맞춘다.
-        pageWebView.addJavascriptInterface(
-                new AndroidBridge(this, pageWebView), "Android");
-    }
-}
-// [생체인증 브릿지 추가 끝] ───────────────────────────
+```text
+AbstractBlazeWebViewDefaultContainerScreen
+    → AbstractBlazeWebViewContainerScreen
+        → AbstractScreen
+            → AppCompatActivity
+                → FragmentActivity (BiometricPrompt 요건 충족 ✅)
 ```
 
-### `pageWebView == null` 인 경우
+### 기존 DefaultAlopexWebViewScreen과의 차이점
 
-- `initialize()` 내부에서 아직 WebView가 만들어지지 않았거나, 조기 `return` 된 경로일 수 있다.
-- 로그인 진입 Intent extra(`KEY_NAV_ID`)·`BlazePageManager` 초기화 순서를 Logcat으로 확인한다.
+| 항목 | DefaultAlopexWebViewScreen | AbstractBlazeWebViewDefaultContainerScreen |
+|------|---------------------------|---------------------------------------------|
+| WebView 접근 | `getPageWebView()` | `getWebViewWithoutContainer()` |
+| WebView 타입 | `AlopexWebView` | `WebView` |
+| 삽입 위치 | `initialize()` 직후 | `setContentView()` 이후 |
+
+### onCreate() 기존 구조
+
+```java
+@Override
+protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+
+    RelativeLayout layout = new RelativeLayout(this);
+    layout.setLayoutParams(new LayoutParams(
+            LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+
+    WebView webView = WebViewHandler.instance().getWebViewWithoutContainer();
+
+    layout.addView(webView);
+    setContentView(layout);
+    BlazePageManager.WebViewHandler.instance().printWebView();
+
+    // ← 여기에 브릿지 등록 블록 삽입
+}
+```
+
+### 삽입 위치: `setContentView()` 및 `printWebView()` 직후
+
+- 기존 **`setContentView()`**, **`printWebView()`** 등 **코드 수정·삭제 금지** — 아래 블록만 **추가**한다.
+- **`webView` 변수**는 위 `onCreate()`에서 이미 선언된 것을 그대로 사용한다.
+- **`AndroidBridge` 생성자**: 첫 인자 `this` → `FragmentActivity` 요건 충족(`AppCompatActivity` 상속), 둘째 인자 → **`WebView`** 타입 (`AlopexWebView` 아님).
+- **`setWebViewClient` 교체/삭제 금지** — Blaze 라우팅·로딩 정책 유지.
+
+```java
+@Override
+protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+
+    RelativeLayout layout = new RelativeLayout(this);
+    layout.setLayoutParams(new LayoutParams(
+            LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+
+    WebView webView =
+            WebViewHandler.instance().getWebViewWithoutContainer();
+
+    layout.addView(webView);
+    setContentView(layout);
+    BlazePageManager.WebViewHandler.instance().printWebView();
+
+    // [생체인증 브릿지 추가 시작] ─────────────────────────
+    // setContentView() 이후 WebView가 준비된 시점에 삽입
+    // 로그인 페이지(LOG_PAGE_ID)인 경우에만 브릿지 등록
+    // 다른 WebView 화면에는 브릿지가 추가되지 않음
+    String pageId = getIntent()
+            .getStringExtra(PageManager.KEY_NAV_ID);
+
+    Log.d("BIOMETRIC_BRIDGE",
+            "[BRIDGE] AbstractBlazeWebViewDefaultContainerScreen"
+            + " > onCreate : pageId=" + pageId);
+
+    if (PageManager.LOG_PAGE_ID.equals(pageId)) {
+        if (webView != null) {
+            // 기존 "Android" 인터페이스와 충돌 시
+            // "BiometricAndroid"로 변경하고 login.html도 동일하게 수정
+            webView.addJavascriptInterface(
+                    new AndroidBridge(this, webView), "Android");
+            Log.d("BIOMETRIC_BRIDGE",
+                    "[BRIDGE] AbstractBlazeWebViewDefaultContainerScreen"
+                    + " > onCreate : 브릿지 등록 완료");
+        } else {
+            // webView null — 원인 추적용 로그
+            Log.w("BIOMETRIC_BRIDGE",
+                    "[BRIDGE] AbstractBlazeWebViewDefaultContainerScreen"
+                    + " > onCreate : webView == null");
+            Log.w("BIOMETRIC_BRIDGE",
+                    "[BRIDGE] 예상 원인 1 — getWebViewWithoutContainer() 반환값 null");
+            Log.w("BIOMETRIC_BRIDGE",
+                    "[BRIDGE] 예상 원인 2 — WebViewHandler 초기화 순서 문제");
+            Log.w("BIOMETRIC_BRIDGE",
+                    "[BRIDGE] 조치 — WebViewHandler 초기화 순서 및 Stack 상태 확인 필요");
+        }
+    } else {
+        // 로그인 페이지가 아닌 경우 — 브릿지 미등록 정상 케이스
+        Log.d("BIOMETRIC_BRIDGE",
+                "[BRIDGE] AbstractBlazeWebViewDefaultContainerScreen"
+                + " > onCreate : 로그인 페이지 아님 → 브릿지 미등록 (정상)");
+    }
+    // [생체인증 브릿지 추가 끝] ───────────────────────────
+}
+```
 
 ### `"Android"` 인터페이스 이름 충돌
 
@@ -935,7 +1014,8 @@ tag:BIOMETRIC_LIB | tag:BIOMETRIC_BRIDGE
 | gson 충돌 | alopex_blaze/build.gradle | 로컬 gson 2.2.4 vs 전이 의존성 | `compileOnly` 등으로 중복 제거 |
 | 전이 의존성 충돌 | 없음 (명령어) | AGP/Gradle 캐시 | `./gradlew clean --refresh-dependencies` |
 | `setAppCacheEnabled` 오류 | alopex_blaze 내 WebView 설정 코드 | API 33에서 제거 | 해당 호출 제거 또는 SDK 버전 분기 |
-| `pageWebView` null | DefaultAlopexWebViewScreen | 초기화 순서·Intent extra 불일치 | 로그인 진입 경로·extra 키 확인 |
+| `webView` null | AbstractBlazeWebViewDefaultContainerScreen | `getWebViewWithoutContainer()` null·WebViewHandler 순서 | Logcat 원인 로그 참고, 초기화·Stack 확인 |
+| VDI 커서 분석 오류로 인한 클래스 불일치 | AbstractBlazeWebViewDefaultContainerScreen.java | `DefaultAlopexWebViewScreen` 으로 잘못 분석됨 | `AbstractBlazeWebViewDefaultContainerScreen.onCreate()` 에 브릿지 등록 블록 삽입 |
 | `"Android"` 인터페이스 충돌 | AndroidBridge 등록부, login.html | 기존 JS Bridge와 이름 충돌 | `BiometricAndroid` 로 통일 |
 
 ---
@@ -967,7 +1047,7 @@ biometric-lib 새 버전을 반영할 때:
 - [ ] 필요 시 `buildFeatures { buildConfig true }` 확인
 - [ ] Merged Manifest에서 biometric-lib 병합 권한·uses-feature 확인
 - [ ] `AndroidBridge.java` 생성 완료 (`alopex_blaze`)
-- [ ] `DefaultAlopexWebViewScreen`에 로그인 페이지 한정 브릿지 등록 완료
+- [ ] `AbstractBlazeWebViewDefaultContainerScreen` `onCreate()` 브릿지 등록 블록 추가 완료 (`setContentView()` 직후)
 - [ ] `login.html` 버튼 및 JS 콜백 함수 추가 완료
 - [ ] `./gradlew :app:assembleDebug` (또는 팀 표준 모듈) 빌드 성공
 - [ ] 실기기에서 안면인식 로그인 동작 확인
