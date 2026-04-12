@@ -1,73 +1,77 @@
 [목적]
-현재 프로젝트의 compileSdk 업그레이드에 따른 영향도를 분석하고 보고서를 작성한다.
-실제 코드 수정은 하지 않는다. 분석 및 보고서 작성만 수행한다.
+현재 프로젝트(A2)의 구조를 분석하여
+외부 생체인증 기능을 이식할 최적 위치를 파악한다.
+실제 코드 수정은 하지 않는다. 분석 및 보고만 수행한다.
 
-[현재 프로젝트 환경]
-- AGP: 7.0.4
-- Gradle: 7.2
-- JDK: 11
-- 모듈 구성:
-    app               compileSdk=28 minSdk=23 targetSdk=28
-    alopex_blaze      compileSdk=28 minSdk=23 targetSdk=28
-    alopex_blaze_core compileSdk=28 minSdk=23 targetSdk=28
-    blaze_app_init    compileSdk=28 minSdk=23 targetSdk=28
-    blaze_app_db      compileSdk=28 minSdk=23 targetSdk=28
-    blaze_extension   compileSdk=28 minSdk=23 targetSdk=28
-    blaze_secure_extension compileSdk=28 minSdk=23 targetSdk=28
-    CorsLib           compileSdk=28 minSdk=23 targetSdk=28
-    connection        compileSdk=29 minSdk=23 targetSdk=29
-- appcompat: appcompat-v7:28.0.0 + jetifier=true
-- gson: local jar 2.2.4
+[분석 대상]
+alopex_blaze 모듈의 아래 클래스들:
+- DefaultAlopexWebViewScreen
+- AbstractScreen
+- WebViewHandler (DefaultAlopexWebViewScreen의 inner class)
+- AlopexWebView
 
-[분석 목표]
-androidx.security:security-crypto:1.1.0-alpha06 사용을 위해
-compileSdk를 33으로 올릴 경우 발생하는 영향도 전체 분석
+[알려진 구조 정보]
+- DefaultAlopexWebViewScreen → AbstractScreen → AppCompatActivity 상속
+- WebViewHandler: DefaultAlopexWebViewScreen의 inner class (상속 없음)
+- WebViewHandler 속성: Stack<Pair<PageNavi, AlopexWebView>> mWebViews
+- AlopexWebView: WebView 상속
 
-[분석 항목]
+[분석 요청 사항]
 
-1. 빌드 도구 업그레이드 필요 여부
-   - 현재 AGP 7.0.4 → compileSdk 33 지원을 위한 최소 AGP 버전
-   - 현재 Gradle 7.2 → AGP 업그레이드에 따른 최소 Gradle 버전
-   - JDK 11 유지 가능 여부
-   - 각 업그레이드 항목의 필요 여부를 표로 정리:
-     | 항목 | 현재 | 필요 버전 | 업그레이드 필요 여부 |
+1. DefaultAlopexWebViewScreen 분석
+   - onCreate() 또는 초기화 시점 전체 흐름
+   - WebViewHandler 생성 시점
+   - login.html 로드 시점 및 방법
+   - AlopexWebView 생성 시점
 
-2. 모듈별 compileSdk 업그레이드 영향도
-   - 각 모듈별로 compileSdk 28 → 33 변경 시:
-     (1) 빌드 오류 가능성
-     (2) 기존 코드 수정 필요 여부
-     (3) deprecated API 사용 여부
-   - 결과를 표로 정리:
-     | 모듈명 | 영향도 | 예상 오류 | 조치 필요 여부 |
+2. WebViewHandler 분석
+   - mWebViews Stack 관리 방식
+   - 현재 활성 AlopexWebView 접근 방법
+   - addJavascriptInterface 호출 가능 시점
 
-3. 의존성 충돌 분석
-   - 현재 선언된 모든 의존성 목록 추출
-   - compileSdk 33 환경에서 충돌 가능한 의존성 식별
-   - appcompat-v7:28.0.0 + jetifier 구조에서 발생 가능한 충돌
-   - gson local jar 2.2.4 충돌 가능성
-   - 결과를 표로 정리:
-     | 의존성 | 현재 버전 | 충돌 여부 | 권장 버전 |
+3. AlopexWebView 분석
+   - 생성자 파라미터
+   - 초기화 시점에 추가 설정 가능 여부
 
-4. API 변경사항 영향도
-   - Android API 29~33 사이 변경된 API 중
-     현재 프로젝트 코드에서 사용 중인 항목 식별
-   - deprecated 항목 목록
-   - 동작 변경(behavior change) 항목 목록
-   - 결과를 표로 정리:
-     | API | 변경 내용 | 영향 모듈 | 대응 방법 |
+4. 이식 위치 후보 분석
+   아래 3가지 후보 각각에 대해
+   가능 여부와 이유를 명확히 판단:
 
-5. targetSdk 영향도
-   - targetSdk는 28 유지 가능 여부 확인
-   - compileSdk 33 + targetSdk 28 조합의 제약사항
+   후보 A: DefaultAlopexWebViewScreen에서
+           AndroidBridge 생성 후
+           AlopexWebView에 addJavascriptInterface 주입
+           (조건: FragmentActivity 참조 확보 필요)
 
-6. 전체 위험도 평가
-   - 전체 업그레이드 작업 규모 추정:
-     | 항목 | 작업량 | 위험도 | 비고 |
-   - 업그레이드 권장 순서 제시
+   후보 B: WebViewHandler 내부에서
+           outer class(DefaultAlopexWebViewScreen) 참조로
+           AndroidBridge 생성 후 주입
+           (조건: inner class이므로 outer class 접근 가능 여부 확인)
 
-[출력 형식]
-- 파일명: upgrade-impact-analysis.md
-- 저장 위치: 프로젝트 루트
-- Markdown 형식
-- 각 분석 항목별 결론을 명확히 제시
-- 작업 완료 후 파일 경로 보고
+   후보 C: AlopexWebView 생성자 또는 초기화 시점에서 처리
+           (조건: FragmentActivity 참조 전달 가능 여부 확인)
+
+5. 결과 보고 형식
+   아래 항목을 반드시 포함:
+
+   [클래스별 초기화 흐름]
+   DefaultAlopexWebViewScreen.onCreate()
+       └── 1. ...
+       └── 2. ...
+       └── 3. login.html 로드 시점
+
+   [추천 이식 위치]
+   - 후보: A / B / C 중 선택
+   - 이유: 구체적 근거 명시
+   - addJavascriptInterface 추가 위치 코드 예시:
+     (수정 아님, 위치만 표시)
+
+   [주의사항]
+   - FragmentActivity 참조 관련
+   - 기존 WebView 동작 영향 여부
+   - login.html 로드 순서와의 관계
+
+[제약 조건]
+- 실제 코드 수정 금지
+- alopex_blaze 모듈 build.gradle 수정 금지
+- 기존 WebView 동작 유지 필수
+- AndroidBridge 생성자는 반드시 FragmentActivity를 받아야 함
