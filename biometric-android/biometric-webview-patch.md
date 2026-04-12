@@ -1,4 +1,4 @@
-# A2 프로젝트 — biometric-lib 직접 이식 가이드 (WebView 연동)
+# MIS 모바일 앱 프로젝트 — biometric-lib 직접 이식 가이드 (WebView 연동)
 
 > **목적**: `alopex_blaze` 모듈에 **biometric-lib**를 **직접** 연동하여, 로그인 WebView에서 안면인식 로그인을 수행한다.  
 > **폐기**: 기존 **biometric-bridge** 간접 참조 방식, **Static Injector** 방식은 본 문서 범위에서 사용하지 않는다.  
@@ -24,6 +24,162 @@
 13. [완료 체크리스트](#13-완료-체크리스트)
 
 --
+## 전체 CASE 목록
+
+### 인증 흐름 전체 구조
+
+```
+앱 진입 (기기 상태 조회)
+ ├─ CASE 1  : 미등록 기기 → 등록 화면
+ ├─ CASE 2  : ACTIVE → 로그인 화면
+ ├─ CASE 9  : LOCKED(서버) → ID/PW 잠금 해제
+ └─ CASE 10 : KEY_INVALIDATED(기기 상태) → 키 갱신 다이얼로그
+
+로그인 화면 (BiometricAuthManager.authenticate)
+ ├─ CASE 7  : 안면인식 미등록 → 설정 유도 다이얼로그
+ ├─ CASE 8  : 생체인식 HW 불가 → 오류 메시지
+ ├─ CASE 5  : 로컬 잠금 진행 중 → 카운트다운
+ ├─ CASE 4  : 인증 실패 (재시도) → 실패 횟수 표시
+ ├─ CASE 3  : SESSION_EXPIRED → 자동 재시도
+ ├─ CASE 6  : INVALID_SIGNATURE 3회 → 자동 키 재발급
+ ├─ CASE 10 : KEY_INVALIDATED(서버 감지) → 키 갱신 다이얼로그
+ └─ CASE 11 : ACCOUNT_LOCKED → ID/PW 잠금 해제 UI
+
+사용자 변경
+ └─ CASE 12 : 담당자 변경 → PIN 인증 → 서버/로컬 삭제 → 등록 화면
+```
+
+---
+
+### CASE 1 — 신규(미등록) 기기
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `DEVICE_NOT_FOUND` |
+| **발생 조건** | 앱 최초 실행 또는 서버에 기기 등록 정보 없음 |
+| **호출 흐름** | `AuthApiClient.getUserId(deviceId)` → HTTP 404 → `DeviceNotFoundException` 발생 |
+| **MIS 모바일 앱 대응** | 등록 화면(`RegisterActivity` 대응 화면)으로 이동. `deviceId`(ANDROID_ID)를 Intent Extra로 전달 |
+
+---
+
+### CASE 2 — 등록 완료 기기 (ACTIVE)
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `ACTIVE` |
+| **발생 조건** | 서버 기기 상태 = `"ACTIVE"` |
+| **호출 흐름** | `getUserId()` → 응답 `status = "ACTIVE"` → `tokenStorage.saveRegistration()` → 로그인 화면 이동 |
+| **MIS 모바일 앱 대응** | 로컬 등록 플래그 저장 후 안면인식 로그인 화면으로 라우팅 |
+
+---
+
+### CASE 3 — 챌린지 세션 만료 (SESSION_EXPIRED) 자동 재시도
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `SESSION_EXPIRED` |
+| **발생 조건** | 챌린지 발급 후 60초 이내 서명 미완료 → 서버가 `SESSION_EXPIRED` 반환 |
+| **호출 흐름** | `requestToken()` → `TokenVerificationException("SESSION_EXPIRED")` → `sessionRetryCount < 2` 이면 `onSessionRetrying()` 콜백 → Challenge 재요청 → BiometricPrompt 재실행 |
+| **MIS 모바일 앱 대응** | `onSessionRetrying(retryCount, maxRetry)` 수신 시 "재시도 중..." 메시지 표시. 2회 초과 시 `onError(SESSION_EXPIRED)` |
+
+---
+
+### CASE 4 — 안면인식 실패 (재시도 가능)
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `BIOMETRIC_AUTH_FAILED` |
+| **발생 조건** | `BiometricPrompt.onAuthenticationFailed()` 호출 (얼굴 불일치, 잠금 임계 미도달) |
+| **호출 흐름** | `onAuthenticationFailed()` → `failurePolicyManager.recordFailure()` → `onRetry(failureCount)` 콜백 |
+| **MIS 모바일 앱 대응** | 실패 횟수 UI 표시 ("N회 실패 / 최대 5회") |
+
+---
+
+### CASE 5 — 로컬 잠금 (일시적)
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `LOCAL_LOCKOUT` |
+| **발생 조건** | 인증 실패 횟수 ≥ 서버 정책 `maxRetryBeforeLockout` → `isLocallyLocked()` = true |
+| **호출 흐름** | `onAuthenticationFailed()` → `isLocallyLocked()` 체크 → `onLockedOut(remainingSeconds)` 콜백 |
+| **MIS 모바일 앱 대응** | 카운트다운 타이머 UI 표시. 시간 경과 후 자동 재시도 활성화 |
+
+---
+
+### CASE 6 — INVALID_SIGNATURE 자동 키 재발급
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `INVALID_SIGNATURE` → 자동 `KEY_RENEWAL` |
+| **발생 조건** | 서버가 `INVALID_SIGNATURE` 3회 연속 반환 (`invalidSignatureCount >= 3`) |
+| **호출 흐름** | `TokenVerificationException("INVALID_SIGNATURE")` → 카운터 증가 → 3회 도달 시 `KeyRenewalHandler.renewAndRetry()` → 새 EC 키쌍 생성 → 서버 공개키 갱신 → BiometricPrompt 재실행 |
+| **MIS 모바일 앱 대응** | 자동 처리 (별도 UI 불필요). BiometricPrompt가 자동 재표시됨 |
+
+---
+
+### CASE 7 — 안면인식 미등록
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `BIOMETRIC_NONE_ENROLLED` |
+| **발생 조건** | `canAuthenticate(BIOMETRIC_WEAK)` = `BIOMETRIC_ERROR_NONE_ENROLLED` |
+| **호출 흐름** | `authenticate()` → `canAuthenticate()` 체크 → `onError(BIOMETRIC_NONE_ENROLLED)` 콜백 |
+| **MIS 모바일 앱 대응** | "안면인식 미등록" 다이얼로그 → "설정으로 이동" 버튼으로 생체인식 설정 화면 유도 |
+
+---
+
+### CASE 8 — 생체인식 하드웨어 불가
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `BIOMETRIC_HW_UNAVAILABLE` |
+| **발생 조건** | `canAuthenticate()` 결과가 `BIOMETRIC_SUCCESS`도 `NONE_ENROLLED`도 아닌 경우, 또는 API < 28 |
+| **호출 흐름** | `authenticate()` → `onError(BIOMETRIC_HW_UNAVAILABLE)` 콜백 |
+| **MIS 모바일 앱 대응** | "생체인식 기능 사용 불가" 오류 메시지 표시 |
+
+---
+
+### CASE 9 — 서버 잠금 (LOCKED)
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `LOCKED` |
+| **발생 조건** | 서버 기기 상태 = `"LOCKED"` (관리자 잠금 또는 서버 측 다중 실패) |
+| **호출 흐름** | `getUserId()` → `status = "LOCKED"` → ID/PW 잠금 해제 UI 표시 → `AuthApiClient.unlockDevice(deviceId)` 호출 |
+| **MIS 모바일 앱 대응** | ID/PW 입력 폼 표시. 인증 성공 후 `unlockDevice()` 호출 → 등록 플래그 저장 → 로그인 화면 이동 |
+
+---
+
+### CASE 10 — Keystore 키 무효화 (KEY_INVALIDATED)
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `KEY_INVALIDATED` |
+| **발생 조건** | ① 서버 기기 상태 = `"KEY_INVALIDATED"` (기기 상태 조회 시) ② 로그인 시 서버 409 KEY_INVALIDATED ③ 로컬 `KeyPermanentlyInvalidatedException` |
+| **호출 흐름** | `onError(KEY_INVALIDATED)` → "보안키 재설정" 다이얼로그 → `biometricAuthManager.startRenewal()` → `KeyRenewalHandler.renewAndRetry()` → 키 재발급 → BiometricPrompt 재실행 |
+| **MIS 모바일 앱 대응** | AlertDialog 표시 필수. 확인 시 `startRenewal()` 호출. 자동 복구 흐름 |
+
+---
+
+### CASE 11 — 계정 잠금 (ACCOUNT_LOCKED)
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `ACCOUNT_LOCKED` |
+| **발생 조건** | 인증 실패 횟수 ≥ 서버 정책 `accountLockThreshold` → 서버 `lockAccount()` 호출 완료 |
+| **호출 흐름** | `onAuthenticationFailed()` → `shouldRequestAccountLock()` = true → `authApiClient.lockAccount()` → `onAccountLocked()` 콜백 |
+| **MIS 모바일 앱 대응** | ID/PW 입력 UI 표시 (안면인식 버튼 숨김). ID/PW 인증 성공 후 `unlockDevice()` 호출 |
+
+---
+
+### CASE 12 — 사용자 변경 (담당자 변경)
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `USER_CHANGE` |
+| **발생 조건** | 담당자 변경 버튼 클릭 |
+| **호출 흐름** | 확인 다이얼로그 → `userChangeHandler.verifyDeviceCredential()` → PIN/패턴 인증 → `onVerified()` → `userChangeHandler.executeChange()` → 서버 `unregisterDevice()` → 로컬 키 삭제 → `tokenStorage.clearAll()` → `onChangeCompleted()` → 등록 화면 이동 |
+| **MIS 모바일 앱 대응** | 버튼 클릭 → AlertDialog → PIN 인증 → 서버/로컬 초기화 → 등록 화면 |
 
 ## 1. 이식 개요 및 구조
 
@@ -33,15 +189,15 @@
 |------|------|
 | 기존 | biometric-bridge 모듈을 통한 **간접** 참조, Static Injector 등 별도 주입 경로 |
 | 변경 이유 | `alopex_blaze` **compileSdk 33** 업그레이드로 biometric-lib와의 빌드 정합이 확보됨 → bridge·Injector **불필요** |
-| 변경 방식 | **biometric-lib** 소스 모듈(AAR 빌드 원천)을 A2 루트에 두고 **`implementation project(':biometric-lib')`** 로 **직접** 참조 |
+| 변경 방식 | **biometric-lib** 소스 모듈(AAR 빌드 원천)을 MIS 모바일 앱 루트에 두고 **`implementation project(':biometric-lib')`** 로 **직접** 참조 |
 
 ### 참고 환경 (문서 작성 기준)
 
 | 구분 | 값 |
 |------|-----|
-| A2 AGP | 7.0.4 |
-| A2 Gradle | 7.2 |
-| A2 JDK | 11 |
+| MIS 모바일 앱 AGP | 7.0.4 |
+| MIS 모바일 앱 Gradle | 7.2 |
+| MIS 모바일 앱 JDK | 11 |
 | alopex_blaze | compileSdk **33**, minSdk 23, targetSdk 28, appcompat **v7:28.0.0**, **jetifier=true** |
 | gson | 로컬 jar **2.2.4** |
 | biometric-lib | compileSdk 31, minSdk 23, targetSdk 31, Java 11 |
@@ -86,7 +242,7 @@
 
 ## 2. 적용 순서
 
-1. **biometric-lib** 폴더 복사 (A2 프로젝트 루트)
+1. **biometric-lib** 폴더 복사 (MIS 모바일 앱 프로젝트 루트)
 2. **settings.gradle**에 `include ':biometric-lib'` 등록
 3. **alopex_blaze/build.gradle** 의존성·Java 11·(필요 시) buildConfig 설정
 4. **Gradle Sync**
@@ -103,7 +259,7 @@
 ```text
 ┌──────────────────────────────────────────────────────────┐
 │ 복사 원본: {로컬저장소}/biometric-lib/                   │
-│ 복사 대상: A2 프로젝트 루트/biometric-lib/               │
+│ 복사 대상: MIS 모바일 앱 프로젝트 루트/biometric-lib/               │
 │ 수정하지 않는 모듈: 기존 모듈 전부                        │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -113,7 +269,7 @@
 - 복사 후 디렉터리 예시:
 
 ```text
-A2-Project-Root/
+MIS 모바일 앱-Project-Root/
 ├── app/
 ├── alopex_blaze/
 ├── alopex_blaze_core/
@@ -212,7 +368,7 @@ android {
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
-│ 생성 대상 파일: A2 프로젝트 루트/biometric.properties    │
+│ 생성 대상 파일: MIS 모바일 앱 프로젝트 루트/biometric.properties    │
 │ 수정 대상 파일 1: .gitignore                             │
 │ 수정 대상 파일 2: alopex_blaze/build.gradle              │
 └──────────────────────────────────────────────────────────┘
@@ -296,12 +452,12 @@ buildFeatures {
 
 ### import 관련 안내
 
-- **`AlopexWebView`**: 실제 FQCN은 A2 소스 기준으로 확인한다. 본 예제는 **`WebView`** 필드에 `getPageWebView()` 반환 인스턴스를 넣는 방식으로 호환한다.
+- **`AlopexWebView`**: 실제 FQCN은 MIS 모바일 앱 소스 기준으로 확인한다. 본 예제는 **`WebView`** 필드에 `getPageWebView()` 반환 인스턴스를 넣는 방식으로 호환한다.
 - **`BuildConfig`**: `import …alopex_blaze…BuildConfig` 형태는 **모듈 패키지**에 맞게 조정한다.
 
 ### 예시 코드 — `AndroidBridge.java` (전체)
 
-> 아래 코드는 **가이드용 예시**이다. 등록 화면·메인 화면 Intent, 설정 화면 이동 등은 A2 실제 Activity/라우팅에 맞게 TODO를 채운다.
+> 아래 코드는 **가이드용 예시**이다. 등록 화면·메인 화면 Intent, 설정 화면 이동 등은 MIS 모바일 앱 실제 Activity/라우팅에 맞게 TODO를 채운다.
 
 ```java
 package com.skcc.alopex.v2.screen.biometric;
@@ -340,7 +496,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * WebView ↔ Native 생체인증 브릿지 (A2 / alopex_blaze).
+ * WebView ↔ Native 생체인증 브릿지 (MIS 모바일 앱 / alopex_blaze).
  *
  * <p>JS에서 {@code Android.*} 로 호출하며, Native에서는 {@link #callJs(String)} 으로 JS 콜백을 보낸다.
  */
@@ -394,7 +550,7 @@ public class AndroidBridge {
                 executor = Executors.newFixedThreadPool(4, r -> {
                     Thread t = new Thread(r);
                     t.setDaemon(true);
-                    t.setName("a2-biometric-io");
+                    t.setName("MIS 모바일 앱-biometric-io");
                     return t;
                 });
                 authApiClient = new AuthApiClient(BuildConfig.BIOMETRIC_SERVER_URL);
@@ -517,7 +673,7 @@ public class AndroidBridge {
                     Log.d("BIOMETRIC_BRIDGE", "[BRIDGE] callback > onLoginSuccess : 로그인 성공 userId=" + userId);
                     String token = tokenResponse.accessToken != null ? tokenResponse.accessToken : "";
                     callJs("onLoginSuccess('" + escapeJs(token) + "')");
-                    // 네이티브 화면 전환이 필요하면 여기서 Intent 처리 (A2 라우팅에 맞게 구현)
+                    // 네이티브 화면 전환이 필요하면 여기서 Intent 처리 (MIS 모바일 앱 라우팅에 맞게 구현)
                 }
 
                 /** CASE 7: 미등록 */
@@ -595,7 +751,7 @@ public class AndroidBridge {
                 }
             };
 
-    // ── Native 다이얼로그 (필요 시 A2 UI 정책에 맞게 수정) ─────
+    // ── Native 다이얼로그 (필요 시 MIS 모바일 앱 UI 정책에 맞게 수정) ─────
 
     private void showKeyInvalidatedDialog() {
         if (activity.isFinishing()) {
@@ -625,7 +781,7 @@ public class AndroidBridge {
                         .setMessage("등록된 기기를 찾을 수 없습니다.")
                         .setPositiveButton("확인", (d, w) -> {
                             tokenStorage.clearRegistration();
-                            // TODO: A2 기기 등록 화면 Intent
+                            // TODO: MIS 모바일 앱 기기 등록 화면 Intent
                         })
                         .setCancelable(false)
                         .show());
@@ -706,7 +862,7 @@ public class AndroidBridge {
                                     public void onChangeCompleted() {
                                         callJs("showProgress(false)");
                                         Toast.makeText(activity, "삭제가 완료되었습니다.", Toast.LENGTH_SHORT).show();
-                                        // TODO: A2 신규 등록 WebView/Activity 로 이동
+                                        // TODO: MIS 모바일 앱 신규 등록 WebView/Activity 로 이동
                                     }
 
                                     @Override
@@ -988,7 +1144,7 @@ protected void onCreate(Bundle savedInstanceState) {
 ```text
 ┌──────────────────────────────────────────────────────────┐
 │ 수정 대상 모듈: app (또는 웹 리소스가 위치한 모듈)       │
-│ 수정 대상 파일: login.html (실제 경로는 A2 자산 구조 따름) │
+│ 수정 대상 파일: login.html (실제 경로는 MIS 모바일 앱 자산 구조 따름) │
 │ 수정하지 않는 모듈: (웹 자산만 수정 시) alopex_blaze 등  │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -1125,7 +1281,7 @@ tag:BIOMETRIC_LIB | tag:BIOMETRIC_BRIDGE
 biometric-lib 새 버전을 반영할 때:
 
 1. 로컬 **biometric-lib** 저장소에서 `git pull` (또는 배포된 소스 수령)
-2. A2 프로젝트 내 **`biometric-lib/` 폴더 삭제**
+2. MIS 모바일 앱 프로젝트 내 **`biometric-lib/` 폴더 삭제**
 3. 최신 소스를 다시 복사 (**`build/` 제외**)
 4. Android Studio **Gradle Sync**
 5. **Logcat**으로 로그인·오류 CASE 재검증
@@ -1136,7 +1292,7 @@ biometric-lib 새 버전을 반영할 때:
 
 ## 13. 완료 체크리스트
 
-- [ ] `biometric-lib` 폴더 복사 완료 (A2 루트 `/biometric-lib/`, `build/` 제외)
+- [ ] `biometric-lib` 폴더 복사 완료 (MIS 모바일 앱 루트 `/biometric-lib/`, `build/` 제외)
 - [ ] `settings.gradle`에 `include ':biometric-lib'` 추가 완료
 - [ ] `alopex_blaze/build.gradle`에 `implementation project(':biometric-lib')` 추가 완료
 - [ ] `alopex_blaze/build.gradle`에 `compileOptions` Java 11 추가 완료
