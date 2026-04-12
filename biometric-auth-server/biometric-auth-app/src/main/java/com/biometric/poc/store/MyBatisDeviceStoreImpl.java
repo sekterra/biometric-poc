@@ -4,6 +4,8 @@ import com.biometric.poc.lib.model.DeviceInfo;
 import com.biometric.poc.lib.model.DeviceStatus;
 import com.biometric.poc.lib.store.DeviceStore;
 import com.biometric.poc.mapper.DeviceMapper;
+import com.biometric.poc.mapper.NonceMapper;
+import com.biometric.poc.mapper.SessionMapper;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -17,9 +19,16 @@ import java.util.Optional;
 public class MyBatisDeviceStoreImpl implements DeviceStore {
 
     private final DeviceMapper deviceMapper;
+    private final NonceMapper nonceMapper;
+    private final SessionMapper sessionMapper;
 
-    public MyBatisDeviceStoreImpl(DeviceMapper deviceMapper) {
+    public MyBatisDeviceStoreImpl(
+            DeviceMapper deviceMapper,
+            NonceMapper nonceMapper,
+            SessionMapper sessionMapper) {
         this.deviceMapper = deviceMapper;
+        this.nonceMapper = nonceMapper;
+        this.sessionMapper = sessionMapper;
     }
 
     /**
@@ -56,5 +65,32 @@ public class MyBatisDeviceStoreImpl implements DeviceStore {
     @Override
     public void updatePublicKey(String deviceId, String publicKeyBase64) {
         deviceMapper.updatePublicKey(deviceId, publicKeyBase64, Instant.now());
+    }
+
+    @Override
+    public void reRegister(DeviceInfo deviceInfo) {
+        if (deviceInfo.getUpdatedAt() == null) {
+            deviceInfo.setUpdatedAt(Instant.now());
+        }
+        deviceMapper.reRegister(deviceInfo);
+    }
+
+    @Override
+    public void renewKey(String deviceId, String newPublicKeyBase64, Instant updatedAt) {
+        deviceMapper.renewKey(deviceId, newPublicKeyBase64, updatedAt);
+    }
+
+    // [중요] 삭제 순서 준수 필수
+    // BIOMETRIC_NONCE → BIOMETRIC_SESSION → BIOMETRIC_DEVICE
+    // 순서 변경 시 FK 제약 위반 오류 발생
+    // Oracle 실서비스 전환 시에도 동일하게 적용
+    @Override
+    public void delete(String deviceId) {
+        // ① BIOMETRIC_NONCE 삭제 (FK 없음, 먼저 삭제)
+        nonceMapper.deleteByDeviceId(deviceId);
+        // ② BIOMETRIC_SESSION 삭제 (DEVICE_ID FK)
+        sessionMapper.deleteByDeviceId(deviceId);
+        // ③ BIOMETRIC_DEVICE 삭제
+        deviceMapper.deleteByDeviceId(deviceId);
     }
 }

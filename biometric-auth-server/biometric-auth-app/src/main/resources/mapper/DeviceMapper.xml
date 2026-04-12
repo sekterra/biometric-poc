@@ -60,4 +60,30 @@
     WHERE DEVICE_ID = #{deviceId}
   </update>
 
+  <update id="reRegister" parameterType="com.biometric.poc.lib.model.DeviceInfo">
+    UPDATE BIOMETRIC_DEVICE
+    SET PUBLIC_KEY_B64 = #{publicKeyBase64},
+        USER_ID        = #{userId},
+        STATUS         = 'ACTIVE',
+        ENROLLED_AT    = #{enrolledAt,
+            typeHandler=com.biometric.poc.mapper.handler.InstantTypeHandler},
+        UPDATED_AT     = #{updatedAt,
+            typeHandler=com.biometric.poc.mapper.handler.InstantTypeHandler}
+    WHERE DEVICE_ID = #{deviceId}
+  </update>
+
+  <update id="renewKey">
+    UPDATE BIOMETRIC_DEVICE
+    SET PUBLIC_KEY_B64 = #{publicKeyBase64},
+        STATUS = 'ACTIVE',
+        UPDATED_AT = #{updatedAt,
+            typeHandler=com.biometric.poc.mapper.handler.InstantTypeHandler}
+    WHERE DEVICE_ID = #{deviceId}
+  </update>
+
+  <delete id="deleteByDeviceId">
+    DELETE FROM BIOMETRIC_DEVICE
+    WHERE DEVICE_ID = #{deviceId}
+  </delete>
+
 </mapper>

@@ -17,4 +17,7 @@ public interface NonceMapper {
     int countByNonce(String nonce);
 
     int deleteExpired(@Param("now") Instant now);
+
+    /** 기기 등록 삭제 시 해당 기기의 nonce 전체 삭제. */
+    void deleteByDeviceId(@Param("deviceId") String deviceId);
 }

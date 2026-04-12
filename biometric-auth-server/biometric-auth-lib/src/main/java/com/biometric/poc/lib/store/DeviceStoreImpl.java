@@ -57,4 +57,32 @@ public class DeviceStoreImpl implements DeviceStore {
             return v;
         });
     }
+
+    @Override
+    public void reRegister(DeviceInfo deviceInfo) {
+        map.put(deviceInfo.getDeviceId(), deviceInfo);
+    }
+
+    @Override
+    public void delete(String deviceId) {
+        map.remove(deviceId);
+    }
+
+    @Override
+    public void renewKey(String deviceId, String newPublicKeyBase64, Instant updatedAt) {
+        DeviceInfo existing = map.get(deviceId);
+        if (existing == null) {
+            return;
+        }
+        map.put(
+                deviceId,
+                DeviceInfo.builder()
+                        .deviceId(existing.getDeviceId())
+                        .userId(existing.getUserId())
+                        .publicKeyBase64(newPublicKeyBase64)
+                        .status(DeviceStatus.ACTIVE)
+                        .enrolledAt(existing.getEnrolledAt())
+                        .updatedAt(updatedAt)
+                        .build());
+    }
 }

@@ -33,6 +33,30 @@ cd D:\biometric-poc\biometric-auth-server
 .\gradlew :biometric-auth-app:bootRun --args="--server.port=8081"
 ```
 
+### Windows 환경 주의사항
+
+Windows 사용자 계정명에 한글이 포함된 경우, Gradle 테스트 실행 시 아래 오류가 발생할 수 있습니다.
+
+```
+Error: Could not find or load main class GradleWorkerMain
+```
+
+**원인**: Gradle 사용자 홈(`%USERPROFILE%\.gradle`) 경로에 한글이 포함되면 Worker JVM이 클래스패스를 인식하지 못합니다.
+
+**해결 방법**: 테스트 실행 전 아래 명령을 먼저 실행합니다.
+
+```powershell
+# PowerShell
+$env:GRADLE_USER_HOME = "C:\gradle-home"
+```
+
+```cmd
+:: CMD
+set GRADLE_USER_HOME=C:\gradle-home
+```
+
+이후 `.\gradlew :biometric-auth-app:test` 가 정상적으로 실행됩니다.
+
 ### Android 데모 앱
 
 1. **서버를 먼저 기동**한 뒤 앱을 실행합니다.

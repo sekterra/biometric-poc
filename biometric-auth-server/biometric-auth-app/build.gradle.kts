@@ -21,4 +21,7 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // Windows: Gradle Test Executor / 파이프 오류 완화
+    maxParallelForks = 1
+    forkEvery = 0
 }

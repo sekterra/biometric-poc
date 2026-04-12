@@ -1,0 +1,115 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.biometric.poc",
+    "module": "biometric-lib",
+    "version": "1.0.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.4"
+    }
+  },
+  "variants": [
+    {
+      "name": "releaseVariantReleaseApiPublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "biometric-lib-1.0.0.aar",
+          "url": "biometric-lib-1.0.0.aar",
+          "size": 52138,
+          "sha512": "9bf78b58590a506d12f86d5ceba392952c3097ae12f870504d0acb8ea2b66efe575933c3b3d7571582c50c8560363e0ea271b917ecbed8f831e3d79697a25c9e",
+          "sha256": "c33f79d9ded83e685967ef5e7c65de81097c60057cd386b78c694c225c114a43",
+          "sha1": "4e4a4b08544a55fcc3d9d3bdb4f9e9e554416b60",
+          "md5": "e3944e9227c799436e83a8c302268e6c"
+        }
+      ]
+    },
+    {
+      "name": "releaseVariantReleaseRuntimePublication",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.libraryelements": "aar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "androidx.fragment",
+          "module": "fragment",
+          "version": {
+            "requires": "1.6.2"
+          }
+        },
+        {
+          "group": "androidx.biometric",
+          "module": "biometric",
+          "version": {
+            "requires": "1.1.0"
+          }
+        },
+        {
+          "group": "androidx.security",
+          "module": "security-crypto",
+          "version": {
+            "requires": "1.1.0-alpha06"
+          }
+        },
+        {
+          "group": "com.squareup.okhttp3",
+          "module": "okhttp",
+          "version": {
+            "requires": "4.12.0"
+          }
+        },
+        {
+          "group": "com.google.code.gson",
+          "module": "gson",
+          "version": {
+            "requires": "2.10.1"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "biometric-lib-1.0.0.aar",
+          "url": "biometric-lib-1.0.0.aar",
+          "size": 52138,
+          "sha512": "9bf78b58590a506d12f86d5ceba392952c3097ae12f870504d0acb8ea2b66efe575933c3b3d7571582c50c8560363e0ea271b917ecbed8f831e3d79697a25c9e",
+          "sha256": "c33f79d9ded83e685967ef5e7c65de81097c60057cd386b78c694c225c114a43",
+          "sha1": "4e4a4b08544a55fcc3d9d3bdb4f9e9e554416b60",
+          "md5": "e3944e9227c799436e83a8c302268e6c"
+        }
+      ]
+    },
+    {
+      "name": "releaseVariantReleaseSourcePublication",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "biometric-lib-1.0.0-sources.jar",
+          "url": "biometric-lib-1.0.0-sources.jar",
+          "size": 28430,
+          "sha512": "08af7ad358a88caa22687c4b1ac3ec96aad62b30dc7c911b9f5e8769a5967821e1f9bf00c372e41c14ed544e544fb3c27cf3caede77ab98939f2ec43b84baccd",
+          "sha256": "68357d6902dc74010971e9cd7c3d78103a97c236efd45b4b6bd258247b677027",
+          "sha1": "ecbe12dc4ad7a58ab0bb463045815183d56b2fe7",
+          "md5": "7bb7278a4542adbbb972db57427bf4f8"
+        }
+      ]
+    }
+  ]
+}

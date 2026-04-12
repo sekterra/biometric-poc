@@ -27,4 +27,13 @@ public interface DeviceMapper {
             @Param("deviceId") String deviceId,
             @Param("publicKeyBase64") String publicKeyBase64,
             @Param("updatedAt") Instant updatedAt);
+
+    void reRegister(DeviceInfo deviceInfo);
+
+    void renewKey(
+            @Param("deviceId") String deviceId,
+            @Param("publicKeyBase64") String publicKeyBase64,
+            @Param("updatedAt") Instant updatedAt);
+
+    void deleteByDeviceId(@Param("deviceId") String deviceId);
 }

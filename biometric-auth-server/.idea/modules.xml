@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/biometric-auth-app/biometric-auth-server.biometric-auth-app.main.iml" filepath="$PROJECT_DIR$/.idea/modules/biometric-auth-app/biometric-auth-server.biometric-auth-app.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/biometric-auth-lib/biometric-auth-server.biometric-auth-lib.main.iml" filepath="$PROJECT_DIR$/.idea/modules/biometric-auth-lib/biometric-auth-server.biometric-auth-lib.main.iml" />
+    </modules>
+  </component>
+</project>

@@ -1,11 +1,55 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.biometric.poc.controller.DeviceControllerIntegrationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-03-28T10:05:49" hostname="DESKTOP-FEPFV5M" time="0.044">
+<testsuite name="com.biometric.poc.controller.DeviceControllerIntegrationTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-04-07T12:50:56" hostname="신창호" time="4.048">
   <properties/>
-  <testcase name="updateKey_success()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.029"/>
-  <testcase name="getUserId_alwaysReturnsUser01()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.006"/>
-  <testcase name="updateKey_deviceNotFound_returns404()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.005"/>
-  <system-out><![CDATA[2026-03-28T19:05:49.663+09:00  INFO 14068 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.biometric.poc.controller.DeviceControllerIntegrationTest]: DeviceControllerIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-2026-03-28T19:05:49.666+09:00  INFO 14068 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.biometric.poc.BiometricAuthApplication for test class com.biometric.poc.controller.DeviceControllerIntegrationTest
+  <testcase name="renewKey_lockedDevice_returns423()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="3.478"/>
+  <testcase name="updateKey_success()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.033"/>
+  <testcase name="unregister_success()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.053"/>
+  <testcase name="unlock_notLockedDevice_returns400()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.045"/>
+  <testcase name="unlock_lockedDevice_returnsActive()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.065"/>
+  <testcase name="renewKey_success()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.029"/>
+  <testcase name="unregister_deviceNotFound_returns404()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.03"/>
+  <testcase name="register_activeDevice_returns409()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.04"/>
+  <testcase name="renewKey_deviceNotFound_returns404()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.02"/>
+  <testcase name="unregister_userMismatch_returns403()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.029"/>
+  <testcase name="getUserId_existingDevice_returnsUserIdAndStatus()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.062"/>
+  <testcase name="register_keyInvalidatedDevice_allowsReRegister()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.052"/>
+  <testcase name="unlock_unknownDevice_returns404()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.025"/>
+  <testcase name="updateKey_deviceNotFound_returns404()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.02"/>
+  <testcase name="getUserId_unknownDevice_returns404()" classname="com.biometric.poc.controller.DeviceControllerIntegrationTest" time="0.02"/>
+  <system-out><![CDATA[21:50:42.123 [Test worker] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.biometric.poc.controller.DeviceControllerIntegrationTest]: DeviceControllerIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+21:50:42.705 [Test worker] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.biometric.poc.BiometricAuthApplication for test class com.biometric.poc.controller.DeviceControllerIntegrationTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.5)
+
+2026-04-07T21:50:44.182+09:00  INFO 32444 --- [    Test worker] c.b.p.c.DeviceControllerIntegrationTest  : Starting DeviceControllerIntegrationTest using Java 21 with PID 32444 (started by 신창호부장 in C:\biometric-poc\biometric-auth-server\biometric-auth-app)
+2026-04-07T21:50:44.185+09:00  INFO 32444 --- [    Test worker] c.b.p.c.DeviceControllerIntegrationTest  : The following 1 profile is active: "test"
+2026-04-07T21:50:50.777+09:00  INFO 32444 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-04-07T21:50:51.585+09:00  INFO 32444 --- [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:biometric user=SA
+2026-04-07T21:50:51.597+09:00  INFO 32444 --- [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-04-07T21:50:52.700+09:00  WARN 32444 --- [    Test worker] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: 9003b075-8001-473f-8b12-6b62916c769e
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-04-07T21:50:53.009+09:00  INFO 32444 --- [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2026-04-07T21:50:55.950+09:00  INFO 32444 --- [    Test worker] o.s.b.a.h2.H2ConsoleAutoConfiguration    : H2 console available at '/h2-console'. Database available at 'jdbc:h2:mem:biometric'
+2026-04-07T21:50:56.257+09:00  INFO 32444 --- [    Test worker] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-04-07T21:50:56.258+09:00  INFO 32444 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-04-07T21:50:56.261+09:00  INFO 32444 --- [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 3 ms
+2026-04-07T21:50:56.392+09:00  INFO 32444 --- [    Test worker] c.b.p.c.DeviceControllerIntegrationTest  : Started DeviceControllerIntegrationTest in 13.187 seconds (process running for 19.683)
+2026-04-07T21:51:00.039+09:00  INFO 32444 --- [    Test worker] c.b.poc.controller.DeviceController      : 기기 등록 삭제 완료 deviceId=unregister-ok-969eab09-997b-4fab-8550-8f8229578392 userId=USER_UNR01
 ]]></system-out>
-  <system-err><![CDATA[]]></system-err>
+  <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (C:\gradle-home\caches\modules-2\files-2.1\net.bytebuddy\byte-buddy-agent\1.14.19\154da3a65b4f4a909d3e5bdec55d1b2b4cbb6ce1\byte-buddy-agent-1.14.19.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
 </testsuite>

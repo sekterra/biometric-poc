@@ -22,4 +22,9 @@
         typeHandler=com.biometric.poc.mapper.handler.InstantTypeHandler}
   </delete>
 
+  <delete id="deleteByDeviceId">
+    DELETE FROM BIOMETRIC_NONCE
+    WHERE DEVICE_ID = #{deviceId}
+  </delete>
+
 </mapper>
