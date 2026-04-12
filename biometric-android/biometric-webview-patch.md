@@ -787,6 +787,77 @@ public class AndroidBridge {
 }
 ```
 
+### userId 전달 및 등록 정보 저장
+
+```text
+┌──────────────────────────────────────────────────────────┐
+│ 수정 대상 모듈: alopex_blaze                             │
+│ 수정 대상 파일: AndroidBridge.java                       │
+│ 수정 범위:                                               │
+│   ① currentUserId 필드 추가                              │
+│   ② setUserId() @JavascriptInterface 메서드 추가         │
+└──────────────────────────────────────────────────────────┘
+```
+
+**추가 이유**
+
+- `login.html`의 `input id="USERID"` 값이 Native로 전달되지 않으면 `TokenStorage`에 **deviceId + userId**가 저장되지 않는다.
+- `BiometricAuthManager` 로그인 시도 시 `TokenStorage.getDeviceId()` 가 `null` 인 경우가 생길 수 있다.
+- 결과: **NOT_REGISTERED** 등 기대와 다른 오류가 발생할 수 있다.
+
+**① 클래스 필드 추가** (기존 필드 선언부 근처)
+
+```java
+/** login.html의 input id="USERID" 로 전달받은 사용자 ID */
+private String currentUserId = "";
+```
+
+**② `@JavascriptInterface` 메서드 추가**
+
+```java
+/**
+ * login.html의 input id="USERID" 값을 Native로 전달.
+ * startFaceLogin() 호출 전에 반드시 먼저 호출되어야 함.
+ *
+ * 역할:
+ *   1. currentUserId 저장
+ *   2. ANDROID_ID 기반 deviceId 생성
+ *   3. TokenStorage.saveRegistration(deviceId, userId) 저장
+ *
+ * @param userId 사용자 ID 입력값 (null 또는 빈값 입력 시 빈문자열 처리)
+ */
+@JavascriptInterface
+public void setUserId(String userId) {
+    Log.d("BIOMETRIC_BRIDGE",
+            "[BRIDGE] AndroidBridge > setUserId : userId=" + userId);
+    this.currentUserId = userId != null ? userId.trim() : "";
+
+    // ANDROID_ID 기반 deviceId 생성
+    // 주의: 동일 기기에서 항상 동일한 값 반환
+    String deviceId = Settings.Secure.getString(
+            activity.getContentResolver(),
+            Settings.Secure.ANDROID_ID);
+
+    // TokenStorage에 deviceId + userId 저장
+    // BiometricAuthManager 로그인 시 이 값을 참조함
+    tokenStorage.saveRegistration(deviceId, currentUserId);
+
+    Log.d("BIOMETRIC_BRIDGE",
+            "[BRIDGE] AndroidBridge > setUserId : 등록 정보 저장 완료"
+            + " deviceId=" + deviceId.substring(0, 4) + "****");
+}
+```
+
+**호출 순서 주의사항**
+
+```text
+setUserId(userId)    ← 반드시 먼저 호출
+        ↓
+startFaceLogin()     ← 이후 호출
+```
+
+순서가 바뀌면 `TokenStorage` 저장 전에 인증이 시작되어 **NOT_REGISTERED** 등 문제가 발생할 수 있다.
+
 ---
 
 ## 8. STEP 6. AbstractBlazeWebViewDefaultContainerScreen 수정 (alopex_blaze)
@@ -925,22 +996,50 @@ protected void onCreate(Bundle savedInstanceState) {
 ### 버튼 예시
 
 ```html
-<button type="button" onclick="Android.startFaceLogin()">안면인식 로그인</button>
-<button type="button" onclick="Android.startUserChange()">사용자 변경</button>
+<!-- 안면인식 로그인 버튼 — Android.startFaceLogin() 직접 호출 대신
+     onFaceLoginClick()을 거쳐 setUserId() 먼저 호출 -->
+<button type="button" onclick="onFaceLoginClick()">
+    안면인식 로그인
+</button>
+<button type="button" onclick="Android.startUserChange()">
+    사용자 변경
+</button>
 ```
 
-> 인터페이스명을 `BiometricAndroid` 로 바꾼 경우 위에서 `BiometricAndroid` 로 치환한다.
+> 인터페이스명을 `BiometricAndroid` 로 바꾼 경우 `Android.setUserId` / `Android.startFaceLogin` / `Android.startUserChange` 를 `BiometricAndroid.*` 로 치환한다.
 
-### JS 콜백 (CASE 주석 포함)
+### login.js 추가 내용
+
+기존 `login.js` 파일에 아래 내용을 추가한다.
 
 ```javascript
+// ── 안면인식 로그인 진입점 ────────────────────────────
+/**
+ * 안면인식 로그인 버튼 클릭 시 호출.
+ * setUserId() → startFaceLogin() 순서를 보장한다.
+ */
+function onFaceLoginClick() {
+    var userId = document.getElementById('USERID').value;
+    if (!userId || userId.trim() === '') {
+        alert('사용자 ID를 입력해주세요.');
+        return;
+    }
+    // ① userId를 Native로 전달 및 TokenStorage 저장
+    Android.setUserId(userId.trim());
+    // ② 안면인식 로그인 시작
+    Android.startFaceLogin();
+}
+
+// ── 생체인증 Native 콜백 ──────────────────────────────
+
 // CASE 1 — 로그인 성공 (accessToken 문자열)
 function onLoginSuccess(token) {
     console.log('onLoginSuccess', token);
     // TODO: 세션 저장, 메인 화면 전환 등
 }
 
-// CASE 5,6,7,8,9,10,11 — 오류 코드 문자열 (예: NOT_REGISTERED, ACCOUNT_LOCKED, NETWORK_ERROR)
+// CASE 5,6,7,8,9,10,11 — 오류 코드 문자열
+// 예: NOT_REGISTERED, ACCOUNT_LOCKED, NETWORK_ERROR 등
 function onLoginError(errorCode) {
     console.warn('onLoginError', errorCode);
     // TODO: 메시지 매핑 및 UI 표시
@@ -951,21 +1050,21 @@ function onRetry(failureCount) {
     console.log('onRetry', failureCount);
 }
 
-// CASE 4 — 잠금 남은 시간(초)
+// CASE 4 — 일시 잠금(초)
 function onLockedOut(seconds) {
     console.log('onLockedOut', seconds);
 }
 
-// CASE 3 — 세션 만료 자동 재시도 진행
+// CASE 3 — 세션 만료 자동 재시도 중
 function onSessionRetrying(retryCount, maxRetry) {
     console.log('onSessionRetrying', retryCount, maxRetry);
 }
 
-// (선택) 네이티브 카운트다운 타이머 연동 시
+// 카운트다운 타이머 연동 (선택)
 function onCountdownTick(sec) { console.log('tick', sec); }
 function onCountdownFinish() { console.log('countdown finish'); }
 
-// (선택) Native 가 호출하는 보조 훅 — 없으면 구현 생략 가능
+// Native 보조 훅 (선택)
 function setFaceLoginEnabled(enabled) { }
 function showProgress(show) { }
 ```
@@ -1016,6 +1115,7 @@ tag:BIOMETRIC_LIB | tag:BIOMETRIC_BRIDGE
 | `setAppCacheEnabled` 오류 | alopex_blaze 내 WebView 설정 코드 | API 33에서 제거 | 해당 호출 제거 또는 SDK 버전 분기 |
 | `webView` null | AbstractBlazeWebViewDefaultContainerScreen | `getWebViewWithoutContainer()` null·WebViewHandler 순서 | Logcat 원인 로그 참고, 초기화·Stack 확인 |
 | VDI 커서 분석 오류로 인한 클래스 불일치 | AbstractBlazeWebViewDefaultContainerScreen.java | `DefaultAlopexWebViewScreen` 으로 잘못 분석됨 | `AbstractBlazeWebViewDefaultContainerScreen.onCreate()` 에 브릿지 등록 블록 삽입 |
+| NOT_REGISTERED 오류 (로그인 시) | AndroidBridge.java, login.js | TokenStorage에 deviceId·userId 미저장 | `setUserId()` 호출 후 `startFaceLogin()` 순서 확인. `login.js`의 `onFaceLoginClick()` 구현 확인 |
 | `"Android"` 인터페이스 충돌 | AndroidBridge 등록부, login.html | 기존 JS Bridge와 이름 충돌 | `BiometricAndroid` 로 통일 |
 
 ---
@@ -1047,6 +1147,9 @@ biometric-lib 새 버전을 반영할 때:
 - [ ] 필요 시 `buildFeatures { buildConfig true }` 확인
 - [ ] Merged Manifest에서 biometric-lib 병합 권한·uses-feature 확인
 - [ ] `AndroidBridge.java` 생성 완료 (`alopex_blaze`)
+- [ ] `AndroidBridge.java`에 `setUserId()` 메서드 추가 완료
+- [ ] `login.js`에 `onFaceLoginClick()` 함수 추가 완료
+- [ ] `login.html` 안면인식 버튼 `onclick="onFaceLoginClick()"` 으로 수정 완료
 - [ ] `AbstractBlazeWebViewDefaultContainerScreen` `onCreate()` 브릿지 등록 블록 추가 완료 (`setContentView()` 직후)
 - [ ] `login.html` 버튼 및 JS 콜백 함수 추가 완료
 - [ ] `./gradlew :app:assembleDebug` (또는 팀 표준 모듈) 빌드 성공
