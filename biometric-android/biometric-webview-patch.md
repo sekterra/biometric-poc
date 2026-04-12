@@ -1,4 +1,5 @@
-# A2 DefaultAlopexWebViewScreen 생체인증 이식 패치 가이드
+# A2 Alopex WebView 생체인증 이식 패치 가이드  
+(BiometricAlopexWebViewScreen 확장 · alopex_blaze 비수정)
 
 > **전제**: `biometric-lib`, `biometric-bridge` 모듈이 A2에 이미 복사·등록되어 있고,  
 > `biometric.properties` + `BuildConfig.BIOMETRIC_SERVER_URL` 설정이 완료된 상태(또는 동시에 적용).
@@ -7,9 +8,12 @@
 
 1. [5. settings.gradle](#5-settingsgradle)  
 2. [4. app/build.gradle](#4-appbuildgradle)  
-3. [1. AndroidBridge.java](#1-androidbridgejava-신규)  
-4. [2. DefaultAlopexWebViewScreen](#2-defaultalopexwebviewscreen-수정)  
-5. [3. login.html](#3-loginhtml-추가--수정)
+3. **Gradle Sync** 실행 (Android Studio)  
+4. [1. AndroidBridge.java](#1-androidbridgejava-신규)  
+5. [2. BiometricAlopexWebViewScreen.java](#2-biometricalopexwebviewscreenjava-신규-생성)  
+6. [2-1. AndroidManifest.xml](#2-1-androidmanifestxml-수정)  
+7. [3. login.html](#3-loginhtml-추가--수정)  
+8. 빌드 후 [검증](#검증) (Logcat)
 
 ---
 
@@ -209,57 +213,125 @@ public class AndroidBridge {
 
 ---
 
-## 2. DefaultAlopexWebViewScreen 수정
+## 2. BiometricAlopexWebViewScreen.java (신규 생성)
 
 ```
-┌─────────────────────────────────────────┐
-│ 적용 대상 모듈: (A2에서 해당 Screen이 속한 모듈, 보통 app 또는 blaze UI 모듈) │
-│ 적용 대상 파일: …/DefaultAlopexWebViewScreen.java │
-│ 적용 위치: onCreate() 내부 — initialize() 직후, loadUrl() 호출 이전 │
-└─────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│ 적용 대상 모듈: app                                     │
+│ 적용 대상 파일:                                         │
+│   app/src/main/java/com/skens/nsms/                     │
+│   BiometricAlopexWebViewScreen.java (신규 생성)         │
+│ DefaultAlopexWebViewScreen 직접 수정 불필요              │
+└─────────────────────────────────────────────────────────┘
+```
+
+**이유**
+
+- `DefaultAlopexWebViewScreen`은 `com.skcc.alopex.v2.screen` 패키지(**alopex_blaze** 모듈)에 있다.
+- `AndroidBridge`는 `com.skens.nsms.biometric` 패키지(**app** 모듈)에 둔다.
+- **alopex_blaze → app** 방향 의존성을 추가하면 **순환 참조**가 될 수 있어, alopex_blaze 원본에 `AndroidBridge`를 import 할 수 없다.
+- **app** 모듈에서 `DefaultAlopexWebViewScreen`을 **상속**한 `BiometricAlopexWebViewScreen`을 두면, app은 이미 alopex_blaze에 의존하므로 브릿지 등록만 app에서 처리할 수 있다.
+
+**주의**
+
+- `super.onCreate()` 안에서 `initialize()` 등이 이미 호출되는 구조라면, **하위 클래스 `onCreate`에서 `super.onCreate()` 직후**에 브릿지를 붙인 시점이 **loadUrl 이전**인지 A2 실제 소스로 한 번 더 확인한다.
+- `initialize()`가 조기 return하면 `pageWebView`가 **null**일 수 있으므로 **반드시 null 체크** 후 `addJavascriptInterface` 실행.
+- **`setWebViewClient`로 AlopexWebViewClient를 교체하지 않는다.** (부모 클래스 동작 유지)
+
+```java
+package com.skens.nsms;
+
+import android.os.Bundle;
+
+// DefaultAlopexWebViewScreen: A2 실제 패키지로 확인 후 수정
+import com.skcc.alopex.v2.screen.DefaultAlopexWebViewScreen;
+import com.skens.nsms.biometric.AndroidBridge;
+
+// AlopexWebView: A2 실제 패키지로 확인 후 수정
+// import ... .AlopexWebView;
+
+// BlazePageManager: A2 실제 패키지로 확인 후 수정
+// import ... .BlazePageManager;
+
+/**
+ * DefaultAlopexWebViewScreen을 확장하여 안면인식 브릿지를 추가한 클래스.
+ * alopex_blaze 모듈을 수정하지 않고 app 모듈에서 기능을 확장한다.
+ *
+ * 적용 이유:
+ *   DefaultAlopexWebViewScreen(alopex_blaze)에서 AndroidBridge(app)를
+ *   직접 import하면 순환 참조가 발생하므로 상속으로 우회한다.
+ */
+public class BiometricAlopexWebViewScreen
+        extends DefaultAlopexWebViewScreen {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        // super.onCreate()에서 initialize() 및 기존 WebView 설정 완료됨
+        // initialize() 직후이므로 loadUrl() 이전 보장
+
+        // [생체인증 브릿지 추가 시작] ─────────────────────────────
+        // initialize()가 조기 return한 경우 pageWebView가 null일 수 있음
+        // → 반드시 null 체크 후 addJavascriptInterface 실행
+        AlopexWebView pageWebView =
+            BlazePageManager.WebViewHandler.instance().getPageWebView();
+
+        if (pageWebView != null) {
+            // 기존 "Android" JS 인터페이스와 충돌 시
+            // "BiometricAndroid"로 변경하고 login.html도 동일하게 수정
+            pageWebView.addJavascriptInterface(
+                new AndroidBridge(this, pageWebView), "Android");
+        }
+        // [생체인증 브릿지 추가 끝] ──────────────────────────────
+    }
+}
+```
+
+---
+
+## 2-1. AndroidManifest.xml 수정
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ 적용 대상 모듈: app                                     │
+│ 적용 대상 파일: app/src/main/AndroidManifest.xml        │
+│ 적용 위치: DefaultAlopexWebViewScreen 선언 부분         │
+└─────────────────────────────────────────────────────────┘
+```
+
+로그인(또는 해당 웹 화면)에 사용하던 **`DefaultAlopexWebViewScreen` Activity 선언**을 **`BiometricAlopexWebViewScreen`으로 교체**한다.
+
+**변경 전 (예시)**
+
+```xml
+<activity
+    android:name="com.skcc.alopex.v2.screen.DefaultAlopexWebViewScreen"
+    ... />
+```
+
+**변경 후 (예시)**
+
+- 기존 `DefaultAlopexWebViewScreen`의 `android:theme`, `android:configChanges` 등 **모든 속성을 그대로** `BiometricAlopexWebViewScreen` 쪽에 복사한다.
+- **원래 `DefaultAlopexWebViewScreen` 블록은 삭제하지 않고 XML 주석으로 보존**한다.
+
+```xml
+<!--
+<activity
+    android:name="com.skcc.alopex.v2.screen.DefaultAlopexWebViewScreen"
+    android:theme="@style/..."
+    android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
+    ... />
+-->
+<activity
+    android:name="com.skens.nsms.BiometricAlopexWebViewScreen"
+    android:theme="@style/..."
+    android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
+    ... />
 ```
 
 **주의**
 
-- `initialize()`가 **조기 return**하는 분기가 있으면, 그 **이후에는** `pageWebView`가 없을 수 있습니다.  
-  → **반드시 `getPageWebView() != null`일 때만** `addJavascriptInterface` 실행.
-- **`setWebViewClient`로 AlopexWebViewClient를 교체하지 마세요.** 기존 클라이언트/핸들러 체인을 유지합니다.
-- 생체 브릿지만 추가합니다.
-
-**추가할 import (예시)**
-
-```java
-import com.skens.nsms.biometric.AndroidBridge;
-// WebViewHandler: A2 실제 패키지
-// import ...WebViewHandler;
-// import ...AlopexWebView;
-```
-
-**onCreate() 삽입 블록 (주석 위치 표시)**
-
-```java
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        // ... 기존 코드 ...
-
-        initialize();
-        // [생체인증 브릿지 추가 시작] ─────────────────────────────────────
-        // 적용 위치: initialize() 직후, loadUrl() 이전
-        // initialize()가 위에서 return 했다면 이 블록은 실행되지 않을 수 있음 → null 필수
-        AlopexWebView pageWebView = WebViewHandler.instance().getPageWebView();
-        if (pageWebView != null) {
-            // JS 미활성화 시 브릿지 동작 안 함 — Alopex 기본 설정이 켜져 있는지 확인
-            // pageWebView.getSettings().setJavaScriptEnabled(true);
-            // 기존 "Android"와 충돌 시 두 번째 인자를 "BiometricAndroid"로 변경하고 HTML도 동일하게 수정
-            pageWebView.addJavascriptInterface(
-                    new AndroidBridge(this, pageWebView), "Android");
-        }
-        // [생체인증 브릿지 추가 끝] ───────────────────────────────────────
-
-        // loadUrl(...);  ← 기존 loadUrl은 이 블록 뒤에서 그대로 호출
-    }
-```
+- `Intent`나 Alopex 내부에서 **클래스 이름 문자열**으로 `DefaultAlopexWebViewScreen`을 지정하는 코드가 있으면, 동일하게 `BiometricAlopexWebViewScreen`으로 바꾸는지 별도 검색이 필요할 수 있다.
 
 ---
 
