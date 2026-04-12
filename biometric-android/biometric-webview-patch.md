@@ -1,54 +1,253 @@
-# A2 Alopex WebView 생체인증 이식 패치 가이드  
-(BiometricAlopexWebViewScreen 확장 · alopex_blaze 비수정)
+# A2 Alopex WebView 생체인증 이식 패치 가이드 (Static Injector)
 
-> **전제**: `biometric-lib`, `biometric-bridge` 모듈이 A2에 이미 복사·등록되어 있고,  
-> `biometric.properties` + `BuildConfig.BIOMETRIC_SERVER_URL` 설정이 완료된 상태(또는 동시에 적용).
-
-**적용 순서 (권장)**
-
-1. [5. settings.gradle](#5-settingsgradle)  
-2. [4. app/build.gradle](#4-appbuildgradle)  
-3. **Gradle Sync** 실행 (Android Studio)  
-4. [1. AndroidBridge.java](#1-androidbridgejava-신규)  
-5. [2. BiometricAlopexWebViewScreen.java](#2-biometricalopexwebviewscreenjava-신규-생성)  
-6. [2-1. AndroidManifest.xml](#2-1-androidmanifestxml-수정)  
-7. [3. login.html](#3-loginhtml-추가--수정)  
-8. 빌드 후 [검증](#검증) (Logcat)
+> **전제**: `biometric-lib`·`biometric-bridge` 모듈이 A2에 포함되어 있고,  
+> `biometric.properties` + `BuildConfig.BIOMETRIC_SERVER_URL` 설정이 완료된 상태(또는 `biometric-bridge-setup.md`와 병행 적용).  
+> 이식은 **VDI 등에서 개발자가 수동**으로 수행한다.
 
 ---
 
-## A1 기준: JS 인터페이스 이름 `"Android"` 충돌 여부
+## 목차
 
-A1(`biometric-android`)에서는 **화면마다 별도의 `WebView` 인스턴스**에 `addJavascriptInterface(..., "Android")`를 붙이므로, **동일 WebView에 두 번 등록하지 않는 한** 이름이 같아도 서로 다른 화면에서는 충돌하지 않습니다.
-
-- `LoginActivity` → `"Android"` (`AndroidBridge`)
-- `RegisterActivity` / `MainActivity` / `MainAfterLoginActivity` → 각각 다른 Bridge 클래스, 동일 별칭 `"Android"`
-
-**A2**에서는 **하나의 `AlopexWebView`에 이미 `JavascriptInterface`가 등록**되어 있을 수 있습니다.  
-그 경우 **같은 WebView에 `"Android"`를 두 번 등록하면 안 됩니다.**  
-→ 기존 delegator와 충돌 시 아래를 모두 **`"BiometricAndroid"`** 로 통일합니다.
-
-| 변경 위치 | 원래 값 | 충돌 시 값 |
-|-----------|---------|------------|
-| `addJavascriptInterface(..., "???")` | `"Android"` | `"BiometricAndroid"` |
-| HTML / JS | `Android.requestFaceLogin()` | `BiometricAndroid.requestFaceLogin()` |
+1. [이식 개요 및 구조](#1-이식-개요-및-구조)
+2. [적용 순서](#2-적용-순서)
+3. [STEP 1. settings.gradle](#3-step-1-settingsgradle)
+4. [STEP 2. app/build.gradle](#4-step-2-appbuildgradle)
+5. [STEP 3. JavascriptBridgeInjector 인터페이스 생성 (alopex_blaze)](#5-step-3-javascriptbridgeinjector-인터페이스-생성-alopex_blaze)
+6. [STEP 4. DefaultAlopexWebViewScreen 수정 (alopex_blaze)](#6-step-4-defaultalopexwebviewscreen-수정-alopex_blaze)
+7. [STEP 5. AndroidBridge.java 생성 (app)](#7-step-5-androidbridgejava-생성-app)
+8. [STEP 6. Application 클래스에 Injector 등록 (app)](#8-step-6-application-클래스에-injector-등록-app)
+9. [STEP 7. login.html 수정](#9-step-7-loginhtml-수정)
+10. [STEP 8. Logcat 검증](#10-step-8-logcat-검증)
+11. [알려진 이슈 및 대응](#11-알려진-이슈-및-대응)
+12. [완료 체크리스트](#12-완료-체크리스트)
 
 ---
 
-## 1. AndroidBridge.java (신규)
+## 1. 이식 개요 및 구조
+
+### 이전 가이드의 한계 (요약)
+
+| 방식 | 문제 |
+|------|------|
+| **BiometricAlopexWebViewScreen 상속** | `NavigationManager` 등이 `DefaultAlopexWebViewScreen.class`를 직접 지정하면 서브클래스가 실행되지 않음 |
+| **DefaultAlopexWebViewScreen에 `AndroidBridge` 직접 import** | `AndroidBridge`(app) → `BiometricBridge` → `security-crypto:1.1.0-alpha06` 등으로 **minCompileSdk 상향**이 전이되면 **alopex_blaze(compileSdk 28)** 와 **checkAarMetadata** 충돌 |
+| **근본 원인** | **alopex_blaze(compileSdk 28)** 에서 **app 모듈 클래스를 직접 참조할 수 없음** (모듈 방향·메타데이터) |
+
+### 채택 방식: Static Injector
+
+- **alopex_blaze**: `JavascriptBridgeInjector` **인터페이스만** 정의하고, `DefaultAlopexWebViewScreen`에서 **정적 콜백**으로 `inject(webView, pageId, activity)` 호출.
+- **app**: `Application.onCreate()`에서 **구현체(람다 또는 익명 클래스)** 를 `registerBridgeInjector`로 등록. 여기서만 `AndroidBridge`·`BiometricBridge`·`PageManager.LOG_PAGE_ID`를 참조.
+- **결과**: alopex_blaze는 app을 **import하지 않음** → 순환 참조·AAR 메타데이터를 app 쪽에 가둘 수 있음.
+
+### 동작 흐름
 
 ```
-┌─────────────────────────────────────────┐
-│ 적용 대상 모듈: app                     │
-│ 적용 대상 파일: app/src/main/java/com/skens/nsms/biometric/AndroidBridge.java │
-│ 적용 위치: 신규 파일 생성 (디렉터리 없으면 생성) │
-└─────────────────────────────────────────┘
+[app 모듈]
+Application.onCreate()
+    └── DefaultAlopexWebViewScreen.registerBridgeInjector(injector)
+
+[alopex_blaze 모듈]
+DefaultAlopexWebViewScreen.onCreate()
+    └── super.onCreate()   ← initialize() + WebView 준비
+    └── sBridgeInjector != null 이면
+            └── pageId = getIntent().getStringExtra(PageManager.KEY_NAV_ID)
+            └── pageWebView = BlazePageManager.WebViewHandler.instance().getPageWebView()
+            └── sBridgeInjector.inject(pageWebView, pageId, this)
+
+[app 모듈 — 등록된 injector 내부]
+    if (PageManager.LOG_PAGE_ID.equals(pageId))   // 예: "login"
+        webView.addJavascriptInterface(new AndroidBridge(activity, webView), "Android")
+
+[biometric-bridge / biometric-lib]
+    AndroidBridge → BiometricBridge → BiometricAuthManager → …
+```
+
+---
+
+## 2. 적용 순서
+
+1. `settings.gradle`
+2. `app/build.gradle`
+3. **Gradle Sync**
+4. `JavascriptBridgeInjector.java` 생성 (**alopex_blaze**)
+5. `DefaultAlopexWebViewScreen.java` 수정 (**alopex_blaze**)
+6. `AndroidBridge.java` 생성 (**app**)
+7. **Application** 클래스 `onCreate()` 수정 (**app**)
+8. `login.html` 수정
+9. 빌드 후 **Logcat** 검증
+
+---
+
+## 3. STEP 1. settings.gradle
+
+```
+┌──────────────────────────────────────────┐
+│ 수정 대상 모듈: 프로젝트 루트            │
+│ 수정 대상 파일: settings.gradle          │
+│ 수정하지 않는 모듈: 기존 모듈 전부       │
+└──────────────────────────────────────────┘
+```
+
+기존 `include` 목록 **하단**에 추가:
+
+```groovy
+include ':biometric-lib'
+include ':biometric-bridge'
+```
+
+---
+
+## 4. STEP 2. app/build.gradle
+
+```
+┌──────────────────────────────────────────┐
+│ 수정 대상 모듈: app                      │
+│ 수정 대상 파일: app/build.gradle         │
+│ 수정하지 않는 모듈: alopex_blaze 등      │
+└──────────────────────────────────────────┘
+```
+
+```groovy
+dependencies {
+    // ... 기존 의존성 ...
+
+    implementation project(':biometric-lib')
+    implementation project(':biometric-bridge')
+}
+```
+
+**`alopex_blaze/build.gradle`에 `biometric-bridge`를 넣지 않는 이유**
+
+- 생체 AAR 의존성은 **app**에서만 둔다.
+- alopex_blaze는 **인터페이스 + 호출 한 줄**만 추가하므로 `security-crypto` 등이 **alopex_blaze 그래프에 올라오지 않음**.
+- **checkAarMetadata**(minCompileSdk 불일치)를 alopex_blaze(compileSdk 28)와 분리하기 위함.
+
+**참고**: `app`도 compileSdk 28이면, 충돌 시 `biometric-bridge/build.gradle`에 `appcompat:1.3.1` 등을 명시하는 것은 **`biometric-bridge-setup.md`** 및 §11과 동일.
+
+---
+
+## 5. STEP 3. JavascriptBridgeInjector 인터페이스 생성 (alopex_blaze)
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ 수정 대상 모듈: alopex_blaze                             │
+│ 적용 대상 파일: (신규)                                   │
+│   alopex_blaze/src/main/java/com/skcc/alopex/v2/screen/  │
+│   JavascriptBridgeInjector.java                          │
+│ 패키지: com.skcc.alopex.v2.screen                        │
+│ (프로젝트 규칙에 맞게 경로만 조정 가능)                   │
+└──────────────────────────────────────────────────────────┘
+```
+
+`DefaultAlopexWebViewScreen`과 **동일 패키지**에 두면 추가 `import` 없이 사용하기 쉽다.
+
+```java
+package com.skcc.alopex.v2.screen;
+
+import androidx.fragment.app.FragmentActivity;
+
+/**
+ * WebView에 JavascriptInterface를 주입하는 콜백 인터페이스.
+ * alopex_blaze가 app 모듈을 직접 참조하지 않고
+ * 생체인증 브릿지를 연결하기 위해 사용한다.
+ */
+public interface JavascriptBridgeInjector {
+
+    /**
+     * @param webView  JavascriptInterface를 등록할 AlopexWebView
+     * @param pageId   현재 페이지 ID (예: Intent extra — {@code PageManager.KEY_NAV_ID})
+     * @param activity FragmentActivity (BiometricPrompt 요건)
+     */
+    void inject(AlopexWebView webView, String pageId, FragmentActivity activity);
+}
+```
+
+> `AlopexWebView`는 기존 alopex_blaze에서 쓰는 타입 그대로 사용한다. (패키지가 다르면 이 파일에 `import` 추가.)
+
+---
+
+## 6. STEP 4. DefaultAlopexWebViewScreen 수정 (alopex_blaze)
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ 수정 대상 모듈: alopex_blaze                             │
+│ 수정 대상 파일: DefaultAlopexWebViewScreen.java          │
+│ 수정 범위: 정적 필드 1개 + 정적 메서드 1개 + onCreate 호출 블록 │
+└──────────────────────────────────────────────────────────┘
+```
+
+### ① 클래스 필드 추가
+
+클래스 본문 상단(다른 static 필드 근처)에 추가:
+
+```java
+// 생체인증 브릿지 주입 콜백 (app 모듈에서 등록)
+// null이면 기존 동작 유지
+private static JavascriptBridgeInjector sBridgeInjector;
+```
+
+### ② 정적 등록 메서드 추가
+
+`DefaultAlopexWebViewScreen` 클래스 안, 적절한 public 영역에 추가:
+
+```java
+/**
+ * 생체인증 브릿지 주입 콜백 등록.
+ * app 모듈 Application.onCreate()에서 호출한다.
+ *
+ * @param injector 주입 구현체 (null 전달 시 해제)
+ */
+public static void registerBridgeInjector(JavascriptBridgeInjector injector) {
+    sBridgeInjector = injector;
+}
+```
+
+### ③ `onCreate()` 내부 호출
+
+**`initialize()` 직후**, **`loadUrl()` 호출 이전**에 삽입한다.  
+(`initialize()`가 조기 return하는 분기가 있으면 그 **아래**에 둘지, **공통으로 WebView가 준비된 뒤**인지 A2 소스에 맞게 조정.)
+
+```java
+        // [생체인증 브릿지 주입 시작] ─────────────────────────
+        // initialize() 직후 WebView가 준비된 시점에 호출
+        // sBridgeInjector가 null이면 기존 동작 그대로 유지
+        if (sBridgeInjector != null) {
+            String pageId = getIntent()
+                .getStringExtra(PageManager.KEY_NAV_ID);
+            AlopexWebView pageWebView =
+                BlazePageManager.WebViewHandler.instance().getPageWebView();
+            if (pageWebView != null) {
+                sBridgeInjector.inject(pageWebView, pageId, this);
+            }
+        }
+        // [생체인증 브릿지 주입 끝] ───────────────────────────
 ```
 
 **주의**
 
-- `AlopexWebView`는 A2 모듈에 정의된 타입입니다. **아래 import 줄을 A2 프로젝트의 실제 패키지로 바꿉니다.**
-- `AlopexWebView`가 `android.webkit.WebView`를 **상속하지 않으면** `evaluateJavascript`를 쓸 수 있는 **실제 `WebView` 참조**(예: `getWebView()`, `getRealWebView()` 등)로 바꿔야 합니다. (A2 API에 맞게 수정)
+- **`setWebViewClient`로 `AlopexWebViewClient`를 교체하지 않는다.**
+- **`pageWebView` null 체크 필수.**
+- 로그인 여부 판별(`LOG_PAGE_ID`)은 **app 쪽 injector 구현**에서 수행한다(§8).
+
+---
+
+## 7. STEP 5. AndroidBridge.java 생성 (app)
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ 수정 대상 모듈: app                                      │
+│ 적용 대상 파일:                                          │
+│   app/src/main/java/com/skens/nsms/biometric/            │
+│   AndroidBridge.java (신규 생성)                         │
+│ 수정하지 않는 모듈: alopex_blaze, biometric-bridge       │
+└──────────────────────────────────────────────────────────┘
+```
+
+**주의사항**
+
+- `AlopexWebView` **import**는 A2 실제 패키지로 수정한다.
+- `BuildConfig` **import**는 app `applicationId`(네임스페이스) 기준으로 맞춘다.
+- JS 인터페이스명 **`"Android"`** 가 기존과 충돌하면 **`"BiometricAndroid"`** 로 바꾸고, **`login.html`도 동일하게** 수정한다.
 
 ```java
 package com.skens.nsms.biometric;
@@ -62,35 +261,73 @@ import com.skens.nsms.BuildConfig;
 import com.skens.nsms.biometric.bridge.BiometricBridge;
 import com.skens.nsms.biometric.bridge.BiometricBridgeCallback;
 
-// 필수: A2 프로젝트에서 AlopexWebView의 실제 패키지로 import 추가
-// import … .AlopexWebView;
+// 필수: A2 프로젝트에서 AlopexWebView의 실제 패키지로 수정
+// import com.skcc.alopex.v2.blaze.AlopexWebView;
 
 /**
  * WebView(AlopexWebView) ↔ 생체인증 Native 브릿지.
- * <p>A1 LoginActivity의 AndroidBridge 중 BiometricBridge 경로를 축약한 형태입니다.
- * <p>JS 별칭은 기본 "Android" — 기존 Alopex와 충돌 시 "BiometricAndroid" 사용.
+ *
+ * 역할:
+ *   - JS에서 호출한 @JavascriptInterface 메서드를 수신
+ *   - BiometricBridge를 통해 AAR 인증 플로우 실행
+ *   - 인증 결과를 evaluateJavascript()로 JS에 전달
+ *
+ * 주의:
+ *   - @JavascriptInterface는 백그라운드 스레드에서 호출됨
+ *     → evaluateJavascript()는 반드시 runOnUiThread() 안에서 호출
+ *   - JS 인터페이스 별칭 "Android"가 기존과 충돌 시
+ *     "BiometricAndroid"로 변경하고 login.html도 동일하게 수정
  */
 public class AndroidBridge {
 
     private static final String TAG = "AndroidBridge";
 
+    /** BiometricPrompt 표시 및 콜백 수신용 Activity */
     private final FragmentActivity activity;
-    /** AlopexWebView가 WebView를 상속하면 그대로 사용; 아니면 내부 WebView로 교체 */
+
+    /**
+     * JS 콜백을 전달할 WebView.
+     * AlopexWebView가 android.webkit.WebView를 직접 상속하므로
+     * evaluateJavascript() 직접 호출 가능.
+     */
     private final AlopexWebView alopexWebView;
+
+    /**
+     * 안면인식 인증 전체 플로우 오케스트레이터.
+     * CASE 1~12 분기 처리 및 BiometricBridgeCallback 호출.
+     */
     private final BiometricBridge biometricBridge;
 
     /**
-     * @param activity       FragmentActivity (BiometricPrompt 요건)
-     * @param alopexWebView  JS 콜백을 보낼 AlopexWebView (WebView 상속 가정)
+     * @param activity      FragmentActivity (BiometricPrompt 요건, null 불가)
+     * @param alopexWebView JS 콜백을 보낼 AlopexWebView (null 불가)
      */
     public AndroidBridge(FragmentActivity activity, AlopexWebView alopexWebView) {
         this.activity = activity;
         this.alopexWebView = alopexWebView;
-        this.biometricBridge = new BiometricBridge(activity, BuildConfig.BIOMETRIC_SERVER_URL);
+        // BuildConfig.BIOMETRIC_SERVER_URL: app/build.gradle의 buildConfigField
+        this.biometricBridge = new BiometricBridge(
+                activity, BuildConfig.BIOMETRIC_SERVER_URL);
+    }
+
+    // ── JS → Native 진입점 ────────────────────────────────────
+
+    /**
+     * HTML: Android.startFaceLogin()
+     * 안면인식 로그인 시작. BiometricPrompt 표시.
+     * @JavascriptInterface는 백그라운드 스레드 → runOnUiThread 필수
+     */
+    @JavascriptInterface
+    public void startFaceLogin() {
+        Log.d("BIOMETRIC_BRIDGE",
+                "[BRIDGE] AndroidBridge > startFaceLogin : JS 호출 수신");
+        activity.runOnUiThread(
+                () -> biometricBridge.startLogin(bridgeLoginCallback));
     }
 
     /**
-     * HTML: {@code Android.requestFaceLogin()} — A1 {@code startFaceLogin()}과 동일 역할.
+     * HTML: Android.requestFaceLogin()
+     * startFaceLogin()의 별칭 — A2 login.html 네이밍에 맞춰 추가.
      */
     @JavascriptInterface
     public void requestFaceLogin() {
@@ -98,34 +335,20 @@ public class AndroidBridge {
     }
 
     /**
-     * HTML: {@code Android.requestChangeUser()} — A1 담당자 변경 진입과 동일 역할.
-     */
-    @JavascriptInterface
-    public void requestChangeUser() {
-        startUserChange();
-    }
-
-    /**
-     * A1과 동일한 JS 메서드명을 쓰는 페이지가 있으면 이 메서드도 노출됩니다.
-     */
-    @JavascriptInterface
-    public void startFaceLogin() {
-        Log.d(TAG, "startFaceLogin() 호출");
-        Log.d("BIOMETRIC_BRIDGE", "[BRIDGE] AndroidBridge > startFaceLogin : JS 호출 수신");
-        activity.runOnUiThread(() -> biometricBridge.startLogin(bridgeLoginCallback));
-    }
-
-    /**
-     * A1 {@code openUserChangeDialog()} 경로 없이 직접 사용자 변경 플로우 진입.
+     * HTML: Android.startUserChange()
+     * 사용자 변경 시작 (CASE 12).
+     * PIN/패턴 인증 → 기존 사용자 제거 → 신규 등록 화면 이동.
      */
     @JavascriptInterface
     public void startUserChange() {
-        Log.d(TAG, "startUserChange() 호출");
-        Log.d("BIOMETRIC_BRIDGE", "[BRIDGE] AndroidBridge > startUserChange : JS 호출 수신");
+        Log.d("BIOMETRIC_BRIDGE",
+                "[BRIDGE] AndroidBridge > startUserChange : JS 호출 수신");
         activity.runOnUiThread(() ->
                 biometricBridge.startUserChange(new BiometricBridgeCallback() {
+
                     @Override
                     public void onLoginSuccess(String userId, String token, int exp) {
+                        // 사용자 변경 완료 후 토큰은 사용하지 않음
                         callJs("onLoginSuccess('')");
                     }
 
@@ -134,6 +357,7 @@ public class AndroidBridge {
                         callJs("onLoginError('" + errorCode + "')");
                     }
 
+                    // 사용자 변경 플로우에서 미사용 콜백 — 빈 구현
                     @Override public void onRetry(int f) {}
                     @Override public void onSessionRetrying(int r, int m) {}
                     @Override public void onLockedOut(int s) {}
@@ -142,62 +366,108 @@ public class AndroidBridge {
                 }));
     }
 
-    private final BiometricBridgeCallback bridgeLoginCallback = new BiometricBridgeCallback() {
+    /**
+     * HTML: Android.requestChangeUser()
+     * startUserChange()의 별칭.
+     */
+    @JavascriptInterface
+    public void requestChangeUser() {
+        startUserChange();
+    }
+
+    // ── Native → JS 콜백 ─────────────────────────────────────
+
+    /**
+     * BiometricBridgeCallback 구현체.
+     * CASE 1~11 결과를 JS 함수로 전달한다.
+     * 모든 콜백은 BiometricBridge 내부에서 UI 스레드로 전달됨.
+     */
+    private final BiometricBridgeCallback bridgeLoginCallback =
+            new BiometricBridgeCallback() {
+
+        /** CASE 1: 로그인 성공 */
         @Override
         public void onLoginSuccess(String userId, String accessToken, int expiresIn) {
-            Log.d(TAG, "bridgeLoginCallback onLoginSuccess: userId=" + userId);
-            Log.d("BIOMETRIC_BRIDGE", "[BRIDGE] callback > onLoginSuccess : 로그인 성공 userId=" + userId);
+            Log.d("BIOMETRIC_BRIDGE",
+                    "[BRIDGE] callback > onLoginSuccess : 로그인 성공 userId=" + userId);
             callJs("onLoginSuccess('" + escapeJs(accessToken) + "')");
         }
 
+        /** CASE 2: 안면 불일치 재시도 가능 */
         @Override
         public void onRetry(int failureCount) {
-            Log.w("BIOMETRIC_BRIDGE", "[BRIDGE] callback > onRetry : 재시도 failureCount=" + failureCount);
+            Log.w("BIOMETRIC_BRIDGE",
+                    "[BRIDGE] callback > onRetry : 재시도 failureCount=" + failureCount);
             callJs("onRetry(" + failureCount + ")");
         }
 
+        /** CASE 3: SESSION_EXPIRED 자동 재시도 중 */
         @Override
         public void onSessionRetrying(int retryCount, int maxRetry) {
-            Log.w("BIOMETRIC_BRIDGE", "[BRIDGE] callback > onSessionRetrying : 세션 재시도 "
+            Log.w("BIOMETRIC_BRIDGE",
+                    "[BRIDGE] callback > onSessionRetrying : 세션 재시도 "
                     + retryCount + "/" + maxRetry);
             callJs("onSessionRetrying(" + retryCount + "," + maxRetry + ")");
         }
 
+        /** CASE 4: 연속 실패로 인한 일시 잠금 */
         @Override
         public void onLockedOut(int remainingSeconds) {
-            Log.w("BIOMETRIC_BRIDGE", "[BRIDGE] callback > onLockedOut : 일시잠금 remainingSeconds="
+            Log.w("BIOMETRIC_BRIDGE",
+                    "[BRIDGE] callback > onLockedOut : 일시잠금 remainingSeconds="
                     + remainingSeconds);
             callJs("onLockedOut(" + remainingSeconds + ")");
         }
 
+        /** CASE 7: 기기 서버 미등록 */
         @Override
         public void onNotRegistered() {
-            Log.w("BIOMETRIC_BRIDGE", "[BRIDGE] callback > onNotRegistered : 미등록 기기");
+            Log.w("BIOMETRIC_BRIDGE",
+                    "[BRIDGE] callback > onNotRegistered : 미등록 기기");
             callJs("onLoginError('NOT_REGISTERED')");
         }
 
+        /** CASE 9: 계정 잠금 → ID/PW 입력 필요 */
         @Override
         public void onAccountLocked() {
-            Log.w("BIOMETRIC_BRIDGE", "[BRIDGE] callback > onAccountLocked : 계정 잠금");
+            Log.w("BIOMETRIC_BRIDGE",
+                    "[BRIDGE] callback > onAccountLocked : 계정 잠금");
             callJs("onLoginError('ACCOUNT_LOCKED')");
         }
 
+        /**
+         * CASE 5,6,8,10,11 등 오류
+         * errorCode 예: NETWORK_ERROR, KEY_INVALIDATED,
+         *               INVALID_SIGNATURE, SESSION_EXPIRED,
+         *               BIOMETRIC_NONE_ENROLLED 등
+         */
         @Override
         public void onError(String errorCode) {
-            Log.e("BIOMETRIC_BRIDGE", "[BRIDGE] callback > onError : 오류 errorCode=" + errorCode);
+            Log.e("BIOMETRIC_BRIDGE",
+                    "[BRIDGE] callback > onError : 오류 errorCode=" + errorCode);
             callJs("onLoginError('" + errorCode + "')");
         }
     };
 
+    // ── 유틸 ─────────────────────────────────────────────────
+
     /**
-     * evaluateJavascript는 메인 스레드에서만 호출해야 하므로 runOnUiThread 필수.
+     * JS 함수 호출. evaluateJavascript()는 UI 스레드 필수.
+     * @param jsCall 예: "onLoginSuccess('token')"
      */
     private void callJs(String jsCall) {
-        Log.d("BIOMETRIC_BRIDGE", "[BRIDGE] AndroidBridge > evaluateJavascript : JS 콜백 전송 function=" + jsCall);
+        Log.d("BIOMETRIC_BRIDGE",
+                "[BRIDGE] AndroidBridge > evaluateJavascript : JS 콜백 전송 function="
+                + jsCall);
         activity.runOnUiThread(() ->
-                alopexWebView.evaluateJavascript("javascript:" + jsCall, null));
+                alopexWebView.evaluateJavascript(
+                        "javascript:" + jsCall, null));
     }
 
+    /**
+     * JS 문자열 내 특수문자 이스케이프.
+     * 토큰 값에 작은따옴표·역슬래시가 포함될 경우를 대비.
+     */
     private static String escapeJs(String s) {
         if (s == null) return "";
         return s.replace("\\", "\\\\").replace("'", "\\'");
@@ -205,248 +475,177 @@ public class AndroidBridge {
 }
 ```
 
-**`AlopexWebView`가 `WebView`를 상속하지 않는 경우**  
-`callJs`에서 `evaluateJavascript`를 호출할 수 있는 **내부 `WebView` 참조**를 사용하세요. (예: `alopexWebView.getWebView()` 등 — A2 API명에 맞게 수정.)
-
-**`BuildConfig` 패키지**: `applicationId`와 동일한 패키지에 생성됩니다.  
-`com.skens.nsms`가 아니면 `import com.skens.nsms.BuildConfig`를 실제 앱 패키지로 수정하세요.
-
 ---
 
-## 2. BiometricAlopexWebViewScreen.java (신규 생성)
+## 8. STEP 6. Application 클래스에 Injector 등록 (app)
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│ 적용 대상 모듈: app                                     │
-│ 적용 대상 파일:                                         │
-│   app/src/main/java/com/skens/nsms/                     │
-│   BiometricAlopexWebViewScreen.java (신규 생성)         │
-│ DefaultAlopexWebViewScreen 직접 수정 불필요              │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ 수정 대상 모듈: app                                      │
+│ 수정 대상 파일: 기존 Application 서브클래스             │
+│   (예: app/.../XXXApplication.java)                     │
+│ 수정 범위: onCreate()에 registerBridgeInjector 호출 추가  │
+└──────────────────────────────────────────────────────────┘
 ```
 
-**이유**
-
-- `DefaultAlopexWebViewScreen`은 `com.skcc.alopex.v2.screen` 패키지(**alopex_blaze** 모듈)에 있다.
-- `AndroidBridge`는 `com.skens.nsms.biometric` 패키지(**app** 모듈)에 둔다.
-- **alopex_blaze → app** 방향 의존성을 추가하면 **순환 참조**가 될 수 있어, alopex_blaze 원본에 `AndroidBridge`를 import 할 수 없다.
-- **app** 모듈에서 `DefaultAlopexWebViewScreen`을 **상속**한 `BiometricAlopexWebViewScreen`을 두면, app은 이미 alopex_blaze에 의존하므로 브릿지 등록만 app에서 처리할 수 있다.
-
-**주의**
-
-- `super.onCreate()` 안에서 `initialize()` 등이 이미 호출되는 구조라면, **하위 클래스 `onCreate`에서 `super.onCreate()` 직후**에 브릿지를 붙인 시점이 **loadUrl 이전**인지 A2 실제 소스로 한 번 더 확인한다.
-- `initialize()`가 조기 return하면 `pageWebView`가 **null**일 수 있으므로 **반드시 null 체크** 후 `addJavascriptInterface` 실행.
-- **`setWebViewClient`로 AlopexWebViewClient를 교체하지 않는다.** (부모 클래스 동작 유지)
+**추가 import (예시)**
 
 ```java
-package com.skens.nsms;
+import androidx.fragment.app.FragmentActivity;
 
-import android.os.Bundle;
-
-// DefaultAlopexWebViewScreen: A2 실제 패키지로 확인 후 수정
 import com.skcc.alopex.v2.screen.DefaultAlopexWebViewScreen;
 import com.skens.nsms.biometric.AndroidBridge;
+// PageManager: A2 실제 패키지
+// import ... .PageManager;
+// AlopexWebView 패키지 (람다 파라미터 타입 추론만 쓰면 생략 가능할 수 있음)
+```
 
-// AlopexWebView: A2 실제 패키지로 확인 후 수정
-// import ... .AlopexWebView;
+**`onCreate()`에 추가** (`super.onCreate()` **이후**, 기존 초기화 코드는 **삭제·변경하지 않음**)
 
-// BlazePageManager: A2 실제 패키지로 확인 후 수정
-// import ... .BlazePageManager;
-
-/**
- * DefaultAlopexWebViewScreen을 확장하여 안면인식 브릿지를 추가한 클래스.
- * alopex_blaze 모듈을 수정하지 않고 app 모듈에서 기능을 확장한다.
- *
- * 적용 이유:
- *   DefaultAlopexWebViewScreen(alopex_blaze)에서 AndroidBridge(app)를
- *   직접 import하면 순환 참조가 발생하므로 상속으로 우회한다.
- */
-public class BiometricAlopexWebViewScreen
-        extends DefaultAlopexWebViewScreen {
-
+```java
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        // super.onCreate()에서 initialize() 및 기존 WebView 설정 완료됨
-        // initialize() 직후이므로 loadUrl() 이전 보장
+    public void onCreate() {
+        super.onCreate();
+        // ... 기존 초기화 코드 유지 ...
 
-        // [생체인증 브릿지 추가 시작] ─────────────────────────────
-        // initialize()가 조기 return한 경우 pageWebView가 null일 수 있음
-        // → 반드시 null 체크 후 addJavascriptInterface 실행
-        AlopexWebView pageWebView =
-            BlazePageManager.WebViewHandler.instance().getPageWebView();
-
-        if (pageWebView != null) {
-            // 기존 "Android" JS 인터페이스와 충돌 시
-            // "BiometricAndroid"로 변경하고 login.html도 동일하게 수정
-            pageWebView.addJavascriptInterface(
-                new AndroidBridge(this, pageWebView), "Android");
-        }
-        // [생체인증 브릿지 추가 끝] ──────────────────────────────
+        // [생체인증 브릿지 등록] ────────────────────────────
+        // DefaultAlopexWebViewScreen이 WebView 준비 후
+        // pageId가 로그인(LOG_PAGE_ID)인 경우에만 AndroidBridge를 주입함
+        DefaultAlopexWebViewScreen.registerBridgeInjector(
+            (webView, pageId, activity) -> {
+                if (PageManager.LOG_PAGE_ID.equals(pageId)) {
+                    webView.addJavascriptInterface(
+                        new AndroidBridge(activity, webView), "Android");
+                }
+            });
+        // [생체인증 브릿지 등록 끝] ──────────────────────────
     }
-}
-```
-
----
-
-## 2-1. AndroidManifest.xml 수정
-
-```
-┌─────────────────────────────────────────────────────────┐
-│ 적용 대상 모듈: app                                     │
-│ 적용 대상 파일: app/src/main/AndroidManifest.xml        │
-│ 적용 위치: DefaultAlopexWebViewScreen 선언 부분         │
-└─────────────────────────────────────────────────────────┘
-```
-
-로그인(또는 해당 웹 화면)에 사용하던 **`DefaultAlopexWebViewScreen` Activity 선언**을 **`BiometricAlopexWebViewScreen`으로 교체**한다.
-
-**변경 전 (예시)**
-
-```xml
-<activity
-    android:name="com.skcc.alopex.v2.screen.DefaultAlopexWebViewScreen"
-    ... />
-```
-
-**변경 후 (예시)**
-
-- 기존 `DefaultAlopexWebViewScreen`의 `android:theme`, `android:configChanges` 등 **모든 속성을 그대로** `BiometricAlopexWebViewScreen` 쪽에 복사한다.
-- **원래 `DefaultAlopexWebViewScreen` 블록은 삭제하지 않고 XML 주석으로 보존**한다.
-
-```xml
-<!--
-<activity
-    android:name="com.skcc.alopex.v2.screen.DefaultAlopexWebViewScreen"
-    android:theme="@style/..."
-    android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
-    ... />
--->
-<activity
-    android:name="com.skens.nsms.BiometricAlopexWebViewScreen"
-    android:theme="@style/..."
-    android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
-    ... />
 ```
 
 **주의**
 
-- `Intent`나 Alopex 내부에서 **클래스 이름 문자열**으로 `DefaultAlopexWebViewScreen`을 지정하는 코드가 있으면, 동일하게 `BiometricAlopexWebViewScreen`으로 바꾸는지 별도 검색이 필요할 수 있다.
+- 기존 `Application.onCreate()` 로직을 **덮어쓰지 말고** 블록만 **추가**한다.
+- 기존 WebView용 `"Android"` **JavascriptInterface**와 충돌하면, 문자열을 **`"BiometricAndroid"`** 로 바꾸고 **§9 `login.html`도 동일하게** 수정한다.
 
 ---
 
-## 3. login.html 추가 / 수정
+## 9. STEP 7. login.html 수정
 
 ```
-┌─────────────────────────────────────────┐
-│ 적용 대상 모듈: app (또는 zip에 포함되어 배포되는 웹 리소스 빌드 소스) │
-│ 적용 대상 파일: login.html (실제 경로는 A2 웹 패키징 구조에 따름) │
-│ 적용 위치: <body> 내 버튼 영역 + <script> 블록 │
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ 수정 대상 모듈: app (또는 zip/웹 리소스 빌드 소스)         │
+│ 수정 대상 파일: login.html                               │
+└──────────────────────────────────────────────────────────┘
 ```
 
-**버튼 (JS 별칭이 `BiometricAndroid`이면 `Android` → `BiometricAndroid`로 변경)**
+**버튼** (`"BiometricAndroid"` 사용 시 접두어만 치환)
 
 ```html
-<button type="button" onclick="Android.requestFaceLogin()">안면인식 로그인</button>
-<button type="button" onclick="Android.requestChangeUser()">사용자 변경</button>
+<button type="button" onclick="Android.startFaceLogin()">안면인식 로그인</button>
+<button type="button" onclick="Android.startUserChange()">사용자 변경</button>
 ```
 
-**JS 함수 전체 (A1 login.html 흐름을 토큰·에러 코드 중심으로 정리)**
+**JS 함수** (Native `evaluateJavascript`와 시그니처 일치)
 
 ```javascript
-/**
- * CASE 1 — Native에서 evaluateJavascript("onLoginSuccess('...')") 호출
- * @param {string} token 액세스 토큰
- */
+/** CASE 1 — 로그인 성공, token 전달 */
 function onLoginSuccess(token) {
-  console.log('onLoginSuccess token length=' + (token ? token.length : 0));
-  // TODO: A2 정책에 따라 토큰 저장, 다음 화면 전환, Alopex 네비게이션 연동
+  console.log('onLoginSuccess', token ? '(token 있음)' : '');
+  // TODO: 토큰 저장, Alopex 다음 화면 등
 }
 
-/**
- * CASE 7,9 및 CASE 5,6,8,10,11 — Native에서 onLoginError('코드') 호출
- * @param {string} errorCode 예: NOT_REGISTERED, ACCOUNT_LOCKED, NETWORK_ERROR …
- */
+/** CASE 5,6,7,8,9,10,11 — 오류 코드 문자열 */
 function onLoginError(errorCode) {
   console.warn('onLoginError', errorCode);
-  // TODO: 메시지 매핑 후 토스트/다이얼로그
+  // NOT_REGISTERED, ACCOUNT_LOCKED, NETWORK_ERROR 등 분기
 }
 
-/**
- * CASE 2 — 재시도 가능한 실패
- */
+/** CASE 2 — 재시도 가능한 실패 */
 function onRetry(failureCount) {
   console.log('onRetry', failureCount);
 }
 
-/**
- * CASE 4 — 일시 잠금(초)
- */
+/** CASE 4 — 일시 잠금(초) */
 function onLockedOut(seconds) {
   console.log('onLockedOut', seconds);
 }
 
-/**
- * CASE 3 — 세션 재시도 중
- */
+/** CASE 3 — 세션 자동 재시도 중 */
 function onSessionRetrying(retryCount, maxRetry) {
   console.log('onSessionRetrying', retryCount, maxRetry);
 }
 ```
 
-> A1 `login.html`에는 `onLoginSuccess()` 인자 없음·`onRetry(failureCount, maxCount)`·`onError(message)` 등 **다른 시그니처**가 있습니다.  
-> 위 스니펫은 **본 패치의 Native(`callJs`)와 1:1로 맞춘 형태**입니다. 기존 A1 스타일 페이지와 병합할 때는 **함수 시그니처 충돌**을 확인하세요.
+---
+
+## 10. STEP 8. Logcat 검증
+
+**필터**
+
+```
+tag:BIOMETRIC_BRIDGE | tag:BIOMETRIC_LIB
+```
+
+**정상 흐름 (예시 순서)**
+
+1. `[BRIDGE] AndroidBridge > startFaceLogin : JS 호출 수신`
+2. `[BRIDGE] BiometricBridge > startLogin : 로그인 요청 수신`
+3. `[AUTH] BiometricAuthManager > authenticate` … (lib 버전에 따라 문구 상이)
+4. `BiometricPrompt` 표시
+5. `[AUTH] ... signPayload` / `requestToken` …
+6. `[BRIDGE] callback > onLoginSuccess : 로그인 성공 userId=...`
+7. `[BRIDGE] AndroidBridge > evaluateJavascript : JS 콜백 전송 function=onLoginSuccess(...)`
+
+**CASE별 비정상 로그·대응 (요약)**
+
+| 로그 패턴 | CASE | 원인 | 대응 |
+|-----------|------|------|------|
+| `callback > onRetry` | 2 | 얼굴 불일치 등 | UI 재시도 |
+| `callback > onLockedOut` | 4 | 실패 누적 | 잠금 시간 안내 |
+| `callback > onSessionRetrying` | 3 | 세션 재시도 | 대기 |
+| `callback > onNotRegistered` | 7 | 미등록 기기 | 등록 플로우 |
+| `callback > onAccountLocked` | 9 | 계정 잠금 | 정책 안내 |
+| `callback > onError` + `NETWORK_ERROR` | 5 | 네트워크 | 연결 확인 |
+| `callback > onError` + `INVALID_SIGNATURE` | 6 | 서명 실패 | 재시도·서버 로그 |
+| `callback > onError` + `TIMESTAMP_OUT_OF_RANGE` | 8 | 시각 오차 | 기기 시간 |
+| `callback > onError` + `KEY_INVALIDATED` | 10 | 키 무효화 | 키 갱신 UX |
+| `callback > onError` + `SESSION_EXPIRED` | 11 | 재시도 한도 | 재로그인 |
 
 ---
 
-## 4. app/build.gradle
+## 11. 알려진 이슈 및 대응
 
-```
-┌─────────────────────────────────────────┐
-│ 적용 대상 모듈: app                     │
-│ 적용 대상 파일: app/build.gradle        │
-│ 적용 위치: dependencies { } 블록 안     │
-└─────────────────────────────────────────┘
-```
-
-```groovy
-dependencies {
-    // ... 기존 의존성 ...
-
-    implementation project(':biometric-lib')
-    implementation project(':biometric-bridge')
-}
-```
-
-(충돌 시 `biometric-bridge/build.gradle`에 `appcompat:1.3.1` / `material:1.4.0` 등 — `biometric-bridge-setup.md` 참고.)
+| 이슈 | 수정 대상 파일 | 원인 | 대응 방법 |
+|------|---------------|------|-----------|
+| TLS 핸드셰이크 실패 | 없음 (JDK) | JDK 11.0.1 `cacerts` 구버전 | JDK 21 `cacerts`로 교체 등 |
+| appcompat 버전 충돌 | `biometric-bridge/build.gradle` | jetifier + AndroidX 혼합 | `androidx.appcompat:appcompat:1.3.1` 명시 |
+| material 버전 충돌 | `biometric-bridge/build.gradle` | macro 태그 미지원 | `com.google.android.material:material:1.4.0` 명시 |
+| 전이 의존성 충돌 | 없음 (명령) | AGP 캐시 | `./gradlew clean --refresh-dependencies` |
+| Gradle Sync 캐시 오류 | 없음 (명령) | jetifier 캐시 | `./gradlew clean --refresh-dependencies` |
+| Knox / Android 12+ 저장소 오류 | `biometric-lib`·`biometric-bridge` `build.gradle` | `security-crypto` 1.0.0 | **1.1.0-alpha06** 유지 |
+| **sBridgeInjector null로 브릿지 미동작** | `Application.java` | `registerBridgeInjector` 미호출 | `Application.onCreate()`에서 등록 확인 |
+| **pageWebView null로 브릿지 미등록** | `DefaultAlopexWebViewScreen` | `initialize()` 조기 return 등 | 로그인 진입 경로·삽입 위치 확인 |
+| **"Android" 인터페이스 충돌** | `AndroidBridge` 등록부, `login.html` | 기존 JSNI와 동일 별칭 | `"BiometricAndroid"`로 통일 |
+| **로그인 외 화면에 브릿지 등록** | `Application` 람다 | `LOG_PAGE_ID` 조건 누락 | `PageManager.LOG_PAGE_ID.equals(pageId)` 유지 |
 
 ---
 
-## 5. settings.gradle
+## 12. 완료 체크리스트
 
-```
-┌─────────────────────────────────────────┐
-│ 적용 대상 모듈: 프로젝트 루트            │
-│ 적용 대상 파일: settings.gradle         │
-│ 적용 위치: 기존 include 목록 하단       │
-└─────────────────────────────────────────┘
-```
-
-```groovy
-include ':biometric-lib'
-include ':biometric-bridge'
-```
-
----
-
-## 검증
-
-- **Gradle Sync** 후 앱 빌드.
-- Logcat 필터: `tag:BIOMETRIC_BRIDGE`  
-  버튼 탭 시 `[BRIDGE] AndroidBridge > startFaceLogin : JS 호출 수신` 등 A1과 동일 태그 메시지 확인.
+- [ ] `settings.gradle`에 `include` 2줄 추가
+- [ ] `app/build.gradle`에 `project(':biometric-lib')`·`project(':biometric-bridge')` 추가
+- [ ] Gradle Sync 성공
+- [ ] `JavascriptBridgeInjector.java` 생성 (alopex_blaze)
+- [ ] `DefaultAlopexWebViewScreen`에 정적 필드·`registerBridgeInjector`·`onCreate` 주입 블록 추가
+- [ ] `AndroidBridge.java` 생성 (app)
+- [ ] `Application.onCreate()`에 `registerBridgeInjector` 추가
+- [ ] `login.html` 버튼 및 JS 함수 추가
+- [ ] `assembleDebug` 빌드 성공
+- [ ] 실기기에서 **로그인 화면** 진입 후 Logcat 정상 흐름 확인
+- [ ] **로그인 외** WebView 화면에서 브릿지 **미동작**(또는 `Android` 미노출) 확인
+- [ ] CASE별 예외 동작 확인
 
 ---
 
-*본 문서는 A2 저장소를 직접 수정하지 않으며, 수동 적용용 패치 가이드입니다.*  
-*저장 위치: `biometric-android/biometric-webview-patch.md`*
+*문서: `biometric-android/biometric-webview-patch.md`*  
+*패턴: Static Injector (`JavascriptBridgeInjector` + `registerBridgeInjector`)*
