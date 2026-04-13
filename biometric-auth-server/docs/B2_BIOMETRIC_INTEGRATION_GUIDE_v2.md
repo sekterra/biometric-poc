@@ -18,8 +18,9 @@
 9. [STEP 7. 기존 JWT 서비스 확장](#step-7-기존-jwt-서비스-확장)
 10. [STEP 8. Spring Security 설정](#step-8-spring-security-설정)
 11. [STEP 9. application.yml 설정](#step-9-applicationyml-설정)
-12. [알려진 이슈 및 대응](#알려진-이슈-및-대응)
-13. [완료 체크리스트](#완료-체크리스트)
+12. [STEP 10. B2 CASE별 응답 처리 명세](#step-10-b2-case별-응답-처리-명세)
+13. [알려진 이슈 및 대응](#알려진-이슈-및-대응)
+14. [완료 체크리스트](#완료-체크리스트)
 
 ---
 
@@ -31,11 +32,12 @@
 4. **STEP 3** — Converter·Entity·Repository·`Jpa*Store`·`ConfigurableFailurePolicyStore` 작성 (nonce 만료 삭제는 **@Query 전용**)  
 5. **STEP 4** — `BiometricConfig`로 `ChallengeService`, `EcdsaVerifier`, `FailurePolicyService` Bean 등록  
 6. **STEP 5** — `POST /biometric/register` 구현 (challenge 전제 조건)  
-7. **STEP 6** — Challenge / Verify / RenewKey API·서비스 (Verify 시 **userId 일치 검증**·실패 시 **lockAccount**)  
+7. **STEP 6** — Challenge / Verify / RenewKey API·서비스 (Verify 시 **userId 일치**·실패 시 **`fail_count` + `max-retry-before-lockout` 도달 시에만 `lockAccount`**)  
 8. **STEP 7** — `JwtTokenService`에 **`issueTokenForBiometric`만 추가**  
 9. **STEP 8** — `/biometric/**` Security 설정  
 10. **STEP 9** — `application.yml` `biometric.policy` 등  
-11. **체크리스트** — 통합·회귀 검증  
+11. **STEP 10** — Android CASE ↔ HTTP/`error` 코드 매핑, `fail_count` 잠금, `@ControllerAdvice` 응답 통일  
+12. **체크리스트** — 통합·회귀 검증  
 
 ---
 
@@ -214,6 +216,7 @@ CREATE TABLE biometric_device (
     status           VARCHAR2(30 CHAR)   NOT NULL,  -- ACTIVE | LOCKED | KEY_INVALIDATED (아래 CHECK)
     enrolled_at      TIMESTAMP(6)         NOT NULL, -- 최초 등록 시각
     updated_at       TIMESTAMP(6)         NOT NULL, -- 마지막 갱신(renew-key 등)
+    fail_count       NUMBER(3)          DEFAULT 0 NOT NULL, -- 연속 verify 실패 — STEP 10 잠금 정책
     CONSTRAINT pk_biometric_device PRIMARY KEY (device_id),
     CONSTRAINT chk_biometric_device_status CHECK (status IN ('ACTIVE', 'LOCKED', 'KEY_INVALIDATED'))
 );
@@ -263,6 +266,7 @@ COMMENT ON COLUMN biometric_device.public_key_b64 IS 'ECDSA 공개키(Base64 등
 COMMENT ON COLUMN biometric_device.status IS 'ACTIVE | LOCKED | KEY_INVALIDATED';
 COMMENT ON COLUMN biometric_device.enrolled_at IS '최초 등록 시각';
 COMMENT ON COLUMN biometric_device.updated_at IS '마지막 갱신 시각';
+COMMENT ON COLUMN biometric_device.fail_count IS '연속 verify 실패 횟수 — 성공 시 0, 잠금 후 reset';
 
 COMMENT ON TABLE biometric_session IS 'Challenge/Verify 1회성 세션. 만료·used 플래그 관리.';
 COMMENT ON COLUMN biometric_session.session_id IS '세션 ID (PK)';
@@ -282,6 +286,17 @@ COMMENT ON COLUMN biometric_nonce.used_at IS 'nonce 기록 시각 — 만료 판
 ```
 
 > 💡 인라인 `--` 주석은 스크립트용이고, **`COMMENT ON TABLE` / `COMMENT ON COLUMN`** 은 Oracle 데이터 사전(`USER_TAB_COMMENTS`, `USER_COL_COMMENTS` 등)에 저장되어 툴·ERD에서 조회된다.
+
+### fail_count 컬럼 추가 (이미 적용한 기존 DB 마이그레이션)
+
+위 **`CREATE TABLE biometric_device`에 `fail_count`가 포함**되어 있으면 생략한다. **과거 DDL만 적용된 DB**에 컬럼을 붙일 때만 아래를 실행한다(`max-retry-before-lockout`·STEP 10 연동).
+
+```sql
+-- STEP 2 DDL 이후 실행 (기존 테이블에만 추가)
+ALTER TABLE biometric_device ADD fail_count NUMBER(3) DEFAULT 0 NOT NULL;
+
+COMMENT ON COLUMN biometric_device.fail_count IS '연속 verify 실패 횟수 — 성공 시 0, 잠금 후 reset';
+```
 
 ---
 
@@ -349,6 +364,8 @@ public class BiometricDeviceEntity {
     private Instant enrolledAt;
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+    @Column(name = "fail_count", nullable = false)
+    private int failCount;
 }
 ```
 
@@ -450,15 +467,51 @@ public class JpaDeviceStore implements DeviceStore {
         repo.deleteById(deviceId);
     }
 
+    /** lib `DeviceStore`에 없음 — B2 전용. `verify` 실패 시 호출. */
+    @Transactional
+    public int incrementFailCount(String deviceId) {
+        BiometricDeviceEntity e = repo.findById(deviceId)
+                .orElseThrow(() -> new IllegalStateException("DEVICE_ROW_MISSING:" + deviceId));
+        int n = e.getFailCount() + 1;
+        e.setFailCount(n);
+        e.setUpdatedAt(Instant.now());
+        return n;
+    }
+
+    /** lib에 없음 — 검증 성공 또는 잠금 직후 호출. */
+    @Transactional
+    public void resetFailCount(String deviceId) {
+        repo.findById(deviceId).ifPresent(e -> {
+            e.setFailCount(0);
+            e.setUpdatedAt(Instant.now());
+        });
+    }
+
+    @Transactional(readOnly = true)
+    public int getFailCount(String deviceId) {
+        return repo.findById(deviceId).map(BiometricDeviceEntity::getFailCount).orElse(0);
+    }
+
     private BiometricDeviceEntity toEntity(DeviceInfo d) {
-        return BiometricDeviceEntity.builder()
-                .deviceId(d.getDeviceId())
-                .userId(d.getUserId())
-                .publicKeyB64(d.getPublicKeyBase64())
-                .status(d.getStatus().name())
-                .enrolledAt(d.getEnrolledAt())
-                .updatedAt(d.getUpdatedAt() != null ? d.getUpdatedAt() : Instant.now())
-                .build();
+        Instant now = Instant.now();
+        return repo.findById(d.getDeviceId())
+                .map(e -> {
+                    e.setUserId(d.getUserId());
+                    e.setPublicKeyB64(d.getPublicKeyBase64());
+                    e.setStatus(d.getStatus().name());
+                    e.setEnrolledAt(d.getEnrolledAt());
+                    e.setUpdatedAt(d.getUpdatedAt() != null ? d.getUpdatedAt() : now);
+                    return e;
+                })
+                .orElseGet(() -> BiometricDeviceEntity.builder()
+                        .deviceId(d.getDeviceId())
+                        .userId(d.getUserId())
+                        .publicKeyB64(d.getPublicKeyBase64())
+                        .status(d.getStatus().name())
+                        .enrolledAt(d.getEnrolledAt())
+                        .updatedAt(d.getUpdatedAt() != null ? d.getUpdatedAt() : now)
+                        .failCount(0)
+                        .build());
     }
 
     private DeviceInfo toDto(BiometricDeviceEntity e) {
@@ -996,10 +1049,12 @@ import com.biometric.poc.lib.ecdsa.EcdsaVerifier;
 import com.biometric.poc.lib.ecdsa.VerificationResult;
 import com.biometric.poc.lib.model.DeviceInfo;
 import com.biometric.poc.lib.model.DeviceStatus;
+import com.biometric.poc.lib.model.FailurePolicyConfig;
 import com.biometric.poc.lib.model.SessionData;
 import com.biometric.poc.lib.policy.FailurePolicyService;
 import com.biometric.poc.lib.store.DeviceStore;
 import com.mycompany.b2.biometric.api.dto.BiometricDtos.*;
+import com.mycompany.b2.biometric.persistence.JpaDeviceStore;
 import com.mycompany.b2.security.JwtTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -1017,6 +1072,7 @@ public class BiometricAuthService {
     private final ChallengeService challengeService;
     private final EcdsaVerifier ecdsaVerifier;
     private final DeviceStore deviceStore;
+    private final JpaDeviceStore jpaDeviceStore;
     private final FailurePolicyService failurePolicyService;
     private final JwtTokenService jwtTokenService;
 
@@ -1079,15 +1135,18 @@ public class BiometricAuthService {
                 req.clientNonce(),
                 req.timestamp());
 
-        // 4) 실패 시 계정 잠금 후 예외
+        // 4) 실패 시 fail_count 증가 — 임계 도달 시에만 lockAccount (lib는 횟수 미추적)
         if (result != VerificationResult.SUCCESS) {
-            // yml의 maxRetryBeforeLockout에 도달했을 때만 잠금
             FailurePolicyConfig policy = failurePolicyService.getPolicy(req.deviceId());
-            // 실패 횟수 카운팅 로직 필요 (별도 컬럼 또는 캐시)
-            // 횟수 >= maxRetryBeforeLockout 시에만 lockAccount() 호출
-            failurePolicyService.lockAccount(req.deviceId());
-            throw new ResponseStatusException(...);
+            int failCount = jpaDeviceStore.incrementFailCount(req.deviceId());
+            if (failCount >= policy.getMaxRetryBeforeLockout()) {
+                failurePolicyService.lockAccount(req.deviceId());
+                jpaDeviceStore.resetFailCount(req.deviceId());
+            }
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, result.name());
         }
+
+        jpaDeviceStore.resetFailCount(req.deviceId());
 
         // ✅ 여기서 JWT를 발급합니다.
         // B2의 기존 JwtTokenService(또는 동등한 클래스)를 호출하세요.
@@ -1110,7 +1169,9 @@ public class BiometricAuthService {
 }
 ```
 
-> 💡 `FailurePolicyService.lockAccount` 는 lib에서 `deviceStore.updateStatus(..., LOCKED)` 로 구현됨.
+> 💡 `FailurePolicyService.lockAccount` 는 lib에서 `deviceStore.updateStatus(..., LOCKED)` 로 구현됨. **`incrementFailCount` / `resetFailCount` 는 `DeviceStore`에 없으므로 `JpaDeviceStore`를 별도 주입**한다(동일 인스턴스가 `@Component`로 등록되어 있으면 스프링이 한 개만 생성).
+
+> ⚠️ `ResponseStatusException`만 쓰면 본문이 B1과 다를 수 있음 — STEP 10의 `@RestControllerAdvice`로 `{"error":"..."}` 통일.
 
 ---
 
@@ -1204,17 +1265,155 @@ spring:
 
 ---
 
+## STEP 10. B2 CASE별 응답 처리 명세
+
+```text
+┌──────────────────────────────────────────────────────────┐
+│ 신규 생성 파일: (선택) .../BiometricApiExceptionHandler.java │
+│ 수정 대상 파일: BiometricAuthService, JpaDeviceStore, DDL  │
+│ 수정하지 않는 파일: biometric-auth-lib 소스(DeviceStore IF) │
+│ 🔴 기존 id/pw JWT·타 도메인 ControllerAdvice와 응답 키 충돌 시 통합 검토 │
+└──────────────────────────────────────────────────────────┘
+```
+
+### 개요
+
+- **Android 근거**: `biometric-android/biometric-lib/.../BiometricAuthManager.java` 주석의 **CASE 1~12** 정의, `AuthApiClient.java`의 HTTP 코드→예외 매핑.
+- **B1 근거**: `biometric-auth-app` — `AuthController` (`/api/auth/challenge`, `/api/auth/token`), `ApiErrorBodies` (`Map.of("error", code)`), `GlobalExceptionHandler` (검증 오류 시 `error`·`field` 등).
+- **lib 근거**: `VerificationResult`·`DeviceStatus`, `ChallengeService.validateSession` → `IllegalStateException("SESSION_EXPIRED")` (내부적으로 `EcdsaVerifier`가 `SESSION_EXPIRED` enum으로 치환), `FailurePolicyService.lockAccount` → `DeviceStore.updateStatus(LOCKED)` (`biometric-auth-lib-analysis.md`).
+
+**원칙**: B2 엔드포인트 경로는 `/biometric/**`(이 문서)와 B1의 `/api/auth/**`·`/api/device/**`가 **다를 수 있다**. Android는 **기본적으로 B1 경로**를 호출하므로, **동일 HTTP 상태·JSON 키(`error`)·본문 코드 문자열**을 맞추려면 **API 게이트웨이 경로 rewrite** 또는 **앱 `baseUrl`/경로 설정 변경**이 필요하다. ⚠️ 경로만 바꾸고 상태·본문이 다르면 CASE 분기가 어긋난다.
+
+**B1 검증 실패 응답**: `POST /api/auth/token` → HTTP **401**, body **`{"error":"SESSION_EXPIRED"}`** 등 (`VerificationResult.name()`). B2 `verify`도 **동일 스키마**를 권장한다. `ResponseStatusException`만 사용할 때 스프링 기본 본문은 B1과 다를 수 있으므로 💡 아래 **`@RestControllerAdvice`** 로 `{ "error": "<reason>" }` 를 강제한다.
+
+### CASE 매핑표 (lib · B1 HTTP · Android 교차)
+
+| CASE | 시나리오 | 발생 조건 | lib 결과값 | B1 HTTP | B1 응답(`error` 등) | B2 처리 방법 | Android 콜백 |
+|------|----------|-----------|------------|---------|---------------------|--------------|----------------|
+| 1 | 인증·토큰 성공 | `EcdsaVerifier.verify` → `SUCCESS` | `SUCCESS` | 200 | — (본문에 `access_token` 등) | `issueTokenForBiometric` 후 200·JWT | `AuthCallback.onSuccess` |
+| 2 | 생체 프롬프트 실패(재시도 가능) | `BiometricPrompt.onAuthenticationFailed` — **서버 무관** | — | — | — | 해당 없음 | `onRetry(failureCount)` |
+| 3 | 세션 만료 자동 재챌린지 | `POST /api/auth/token` → 401, `error=SESSION_EXPIRED` | `SESSION_EXPIRED` | 401 | `SESSION_EXPIRED` | 동일 응답 유지 | `onSessionRetrying` |
+| 4 | 로컬 일시 잠금 | `FailurePolicyManager` 로컬 카운트 — **서버 무관** | — | — | — | 해당 없음 (앱 정책) | `onLockedOut(remainingSeconds)` |
+| 5 | 서명 오류(임계 미만) | 401 `INVALID_SIGNATURE` — 연속 횟수가 앱 임계 미만 | `INVALID_SIGNATURE` | 401 | `INVALID_SIGNATURE` | B2도 401·동일 코드 ⚠️ 앱은 `onError(INVALID_SIGNATURE)` (javadoc상 5/6/8과 `onError` 공유) | `onError(INVALID_SIGNATURE)` |
+| 6 | 자동 키 재발급 | 위와 동일 코드가 **연속 임계 이상** | `INVALID_SIGNATURE` | 401 | `INVALID_SIGNATURE` | 서버는 동일; 앱이 횟수 카운트 후 `KeyRenewalHandler` | `KeyRenewalHandler.renewAndRetry` |
+| 7 | 기기 미등록 | `POST .../challenge` → 404 또는 로컬 미등록 | — | 404 | `DEVICE_NOT_FOUND` | `challenge`에서 `NOT_FOUND`·동일 바디 권장 | `onNotRegistered` |
+| 8 | 기타 검증 실패 | `TIMESTAMP_OUT_OF_RANGE` / `NONCE_REPLAY` / `MISSING_SIGNATURE` | 각 enum | 401 | enum 이름과 동일 문자열 | `verify` 실패 분기에서 `result.name()` 유지 | `onError` (매핑된 `ErrorCode`) |
+| 9 | 계정 잠금 | (A) `POST .../challenge` **423** `ACCOUNT_LOCKED` 또는 (B) 로컬 `accountLockThreshold` 후 `POST .../account-lock` | — | 423 / 200 | `ACCOUNT_LOCKED` / 잠금 API `status` | `challenge`·`renew-key`에서 `LOCKED`·잠금 API는 B1과 동일 계약 유지 ⚠️ B2 문서는 `/biometric/**` — 경로만 다를 수 있음 | `onAccountLocked` |
+| 10 | 키 무효 | `challenge` **409** `KEY_INVALIDATED` 또는 Keystore `KeyPermanentlyInvalidatedException` | — | 409 | `KEY_INVALIDATED` | `challenge`에서 `CONFLICT`·동일 코드 | `onError(KEY_INVALIDATED)` |
+| 11 | 세션 재시도 한계 | CASE 3 재시도 횟수 초과 후에도 실패 | `SESSION_EXPIRED` 등 | 401 | — | 서버는 개별 요청만 처리; 한계는 **클라이언트** | `onError(SESSION_EXPIRED)` |
+| 12 | 사용자 변경 | `UserChangeHandler` / `BiometricBridge` — **서버 플로우는 앱 정의** | — | — | — | B2에서 별도 API 정책 시 문서화 💡 | (앱 전용) |
+
+⚠️ **403 `USER_DEVICE_MISMATCH`**: B2 `verify`에서 사용 시, Android `AuthApiClient.requestToken`은 **401만** `TokenVerificationException`으로 파싱한다. **403은 `RuntimeException("HTTP 403: ...")`** 로 떨어져 CASE 매핑이 어긋날 수 있다. B1 `AuthController`는 해당 코드를 쓰지 않음. 💡 **401 + `USER_DEVICE_MISMATCH`** 로 맞추거나, 앱 클라이언트에 403 파싱을 추가한다.
+
+⚠️ **B1 `GlobalExceptionHandler`**: 400 응답은 `{"error","field"}` 등으로 **`/api/auth/*` 컨트롤러의 401 본문과 형식이 다르다**. Validation 실패와 인증 실패를 구분해 처리한다.
+
+### B2 공통 에러 응답 형식 (B1 `ApiErrorBodies` 정렬)
+
+B1 성공이 아닌 비즈니스 오류(컨트롤러가 직접 반환):
+
+```json
+{ "error": "DEVICE_NOT_FOUND" }
+```
+
+검증 실패(B1 `GlobalExceptionHandler`):
+
+```json
+{ "error": "INVALID_DEVICE_ID", "field": "deviceId" }
+```
+
+💡 B2에서 `ResponseStatusException(HttpStatus.NOT_FOUND, "DEVICE_NOT_FOUND")` 등을 쓸 때 **본문을 B1과 같이** 주려면 전역 예외 처리기에서 `reason`을 `error` 값으로 넣는다.
+
+```java
+package com.mycompany.b2.biometric.api;
+
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Map;
+
+@RestControllerAdvice(assignableTypes = BiometricAuthController.class)
+public class BiometricApiExceptionHandler {
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> handleResponseStatus(ResponseStatusException ex) {
+        HttpStatusCode status = ex.getStatusCode();
+        String code = ex.getReason() != null && !ex.getReason().isBlank()
+                ? ex.getReason()
+                : "ERROR";
+        return ResponseEntity.status(status).body(Map.of("error", code));
+    }
+}
+```
+
+⚠️ `assignableTypes`를 쓰면 **해당 컨트롤러 패키지에만** 적용된다. B2 전역으로 통일하려면 `assignableTypes`를 제거하고 기존 `GlobalExceptionHandler`와 **중복 등록·응답 키 불일치**를 검토한다.
+
+### CASE별 B2 구현 포인트
+
+**CASE 1 — 인증 성공**  
+발생 위치: `BiometricAuthService.verify()` 마지막.  
+B2 처리: `jpaDeviceStore.resetFailCount`, `jwtTokenService.issueTokenForBiometric`.  
+반환: HTTP 200 + `VerifyResponse`(문서의 DTO).  
+Android: `onSuccess`.
+
+**CASE 2 / 4 — 로컬 전용**  
+B2 처리: 없음.
+
+**CASE 3 / 8 / 11 — `verify` 실패·세션 만료**  
+발생 위치: `EcdsaVerifier.verify` 반환값 ≠ `SUCCESS`.  
+B2 처리: `fail_count` 증가·임계 시 `lockAccount`·`resetFailCount`(STEP 6), `401` + `{"error":"<VerificationResult.name()>"}`.  
+Android: `TokenVerificationException(error)` → CASE 3/8/11 분기.
+
+**CASE 5 / 6 — INVALID_SIGNATURE**  
+B2 처리: CASE 8과 동일 응답; **횟수 기반 키 갱신은 Android** (`INVALID_SIGNATURE_RENEWAL_THRESHOLD`).  
+💡 서버만으로 CASE 6을 구현하려면 별도 정책 API가 필요하다.
+
+**CASE 7 — 미등록**  
+발생 위치: `challenge()`에서 `deviceStore.findByDeviceId` empty.  
+반환: HTTP 404 + `{"error":"DEVICE_NOT_FOUND"}`.
+
+**CASE 9 — 잠금**  
+발생 위치: `challenge`/`renewKey`에서 `DeviceStatus.LOCKED`; 또는 Android가 `POST .../account-lock` 호출.  
+B2 처리: HTTP 423(또는 B1과 동일 상태)·`ACCOUNT_LOCKED`; 잠금 API는 B1과 동일 JSON 권장.
+
+**CASE 10**  
+발생 위치: `challenge`에서 `KEY_INVALIDATED`.  
+반환: HTTP 409 + `{"error":"KEY_INVALIDATED"}`.
+
+**CASE 12**  
+B2 처리: 조직 정책에 따른 별도 엔드포인트·문서화.
+
+### fail_count 기반 잠금 흐름 (텍스트 시퀀스)
+
+```text
+[verify 요청]
+    → userId 일치 검증 실패? → (정책에 따라) 즉시 403/401 — fail_count 정책은 선택
+    → EcdsaVerifier.verify
+        → SUCCESS → resetFailCount(deviceId) → JWT 발급
+        → 실패 enum → incrementFailCount(deviceId) → n = 반환값
+            → n >= maxRetryBeforeLockout?
+                → YES: lockAccount(deviceId) → resetFailCount(deviceId) → 401 { error: enum 이름 }
+                → NO: 401 { error: enum 이름 } (잠금 없음)
+```
+
+> ⚠️ `maxRetryBeforeLockout`은 **서버 DB `fail_count`** 와 짝을 이룬다. Android `FailurePolicyManager`의 로컬 잠금·`accountLockThreshold`와 **별개**이므로 운영 정책을 문서화한다.
+
+---
+
 ## 알려진 이슈 및 대응
 
 | 이슈                           | 수정 대상 파일             | 원인                | 대응 방법                                    |
 | ---------------------------- | -------------------- | ----------------- | ---------------------------------------- |
 | challenge 시 DEVICE_NOT_FOUND | —                    | 미등록 기기            | STEP 5 `POST /biometric/register` 선행     |
 | verify 직후 항상 UNAUTHORIZED    | Android/서명 페이로드      | 페이로드 형식 불일치       | lib 규칙: `serverChallenge:clientNonce:deviceId:timestamp` (`EcdsaVerifier.buildPayload`) |
-| USER_DEVICE_MISMATCH         | BiometricAuthService | 요청 userId ≠ DB    | 클라이언트·DB 데이터 정합                          |
-| verify 실패 시 곧바로 LOCKED       | BiometricAuthService | 정책상 매 실패 잠금       | 잠금 조건을 횟수 기반으로 바꾸려면 FailurePolicyService 활용 확장 💡 |
+| USER_DEVICE_MISMATCH         | BiometricAuthService | 요청 userId ≠ DB    | 클라이언트·DB 데이터 정합; ⚠️ 403이면 Android 토큰 예외 매핑 깨짐 → STEP 10 |
+| verify 실패 시 즉시 LOCKED       | BiometricAuthService / DDL | 매 요청마다 lockAccount | STEP 6·10: `fail_count` + `maxRetryBeforeLockout` |
 | Nonce DELETE 안 됨             | JpaNonceStore        | @Modifying 트랜잭션 밖 | 호출 메서드에 `@Transactional`                 |
 | JWT Claims 누락                | JwtTokenService      | 신규 메서드 미구현        | STEP 7 `issueTokenForBiometric` 확인       |
 | FilterChain 충돌               | Security 설정 클래스      | Bean 중복           | 단일 체인으로 통합                               |
+| B1과 본문 불일치                | ExceptionHandler     | ResponseStatusException 기본 본문 | STEP 10 `BiometricApiExceptionHandler` |
 
 ---
 
@@ -1229,14 +1428,20 @@ spring:
 - [ ] `POST /biometric/register` → DB `biometric_device` INSERT 확인
 - [ ] `POST /biometric/challenge` → sessionId·challenge 반환
 - [ ] `POST /biometric/verify` → SUCCESS 시 JWT, Claims에 deviceId·userId
-- [ ] verify 실패 시 `lockAccount`·401 응답 확인 (정책 검토)
+- [ ] verify 실패 시 401·`{"error":"<VerificationResult>"}` 확인; **임계 도달 시에만** `lockAccount`(STEP 10)
 - [ ] `POST /biometric/renew-key` 동작 확인
 - [ ] 🔴 기존 id/pw 로그인 JWT 발급 **회귀 테스트** (기존 메서드 본문 미변경)
 - [ ] `/biometric/**` Security permitAll (또는 팀 보안 정책 반영)
 - [ ] `biometric.policy.*` yml 로딩 확인
 - [ ] `spring.jpa.hibernate.ddl-auto: none` 운영 반영
+- [ ] `biometric_device.fail_count` 컬럼 추가 완료(신규 DDL 또는 ALTER)
+- [ ] `JpaDeviceStore`에 `incrementFailCount` / `resetFailCount` / `getFailCount` 추가
+- [ ] `verify()` 실패 시 횟수 기반 잠금 동작 확인 (`max-retry-before-lockout` 값 반영)
+- [ ] `verify()` 성공 시 `fail_count` 0 초기화 확인
+- [ ] B2 `@RestControllerAdvice` 에러 응답 형식(B1 `{"error"}`) 통일 확인
+- [ ] CASE별 Android 콜백 동작 E2E 확인
 
 ---
 
 **문서 경로**: `biometric-auth-server/docs/B2_BIOMETRIC_INTEGRATION_GUIDE_v2.md`  
-**참고**: 상세 JPA 엔티티·`JpaDeviceStore`/`JpaSessionStore` 전문은 `B2_BIOMETRIC_INTEGRATION_GUIDE.md`(v1)와 동일하며, v2는 **형식·STEP 5·Verify 보강·Nonce 쿼리**를 중심으로 정리하였다.
+**참고**: 상세 JPA 엔티티·`JpaDeviceStore`/`JpaSessionStore` 전문은 `B2_BIOMETRIC_INTEGRATION_GUIDE.md`(v1)와 동일하며, v2는 **형식·STEP 5·Verify·fail_count·STEP 10 CASE 매핑**을 중심으로 정리하였다.
