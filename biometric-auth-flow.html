@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A1·B1 생체인증 시스템 — 구조 및 인증 흐름</title>
+<style>
+:root{
+  --bg:#ffffff;--bg2:#f6f6f4;--bg3:#ebebea;
+  --text:#1a1a18;--text2:#6b6b68;
+  --bd:rgba(0,0,0,0.13);--bd2:rgba(0,0,0,0.22);
+  --sans:system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'Consolas','Menlo',monospace;
+  --r:8px;--rl:14px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1c1c1a;--bg2:#262624;--bg3:#323230;
+  --text:#e8e8e4;--text2:#a0a09c;
+  --bd:rgba(255,255,255,0.1);--bd2:rgba(255,255,255,0.22);
+}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.6}
+.wrap{max-width:880px;margin:0 auto;padding:40px 24px 60px}
+.doc-header{margin-bottom:32px;padding-bottom:18px;border-bottom:.5px solid var(--bd)}
+.doc-title{font-size:22px;font-weight:500;margin-bottom:6px}
+.doc-meta{font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{font-size:11px;padding:2px 8px;border-radius:4px;background:var(--bg3);border:.5px solid var(--bd2);color:var(--text2);font-family:var(--mono)}
+.sec{margin-bottom:36px}
+.sec-title{font-size:11px;font-weight:500;color:var(--text2);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
+.card{background:var(--bg);border:.5px solid var(--bd2);border-radius:var(--rl);padding:20px}
+
+/* ── SVG 텍스트 & 컴포넌트 클래스 ── */
+text.th{font:500 14px var(--sans);fill:var(--text)}
+text.t {font:400 14px var(--sans);fill:var(--text)}
+text.ts{font:400 12px var(--sans);fill:var(--text2)}
+rect.abg{fill:#E1F5EE;stroke:#5DCAA5;stroke-width:.5}
+rect.sbg{fill:#EEEDFE;stroke:#AFA9EC;stroke-width:.5}
+rect.sub{fill:var(--bg);stroke:var(--bd2);stroke-width:.5}
+rect.fbg{fill:var(--bg2);stroke:var(--bd);stroke-width:.5}
+line.al{stroke:var(--text2);stroke-width:1;fill:none}
+@media(prefers-color-scheme:dark){rect.abg{fill:#085041;stroke:#5DCAA5}rect.sbg{fill:#26215C;stroke:#AFA9EC}}
+
+/* ── SVG 컬러 그룹 (라이트) ── */
+g.cgr>rect{fill:#F1EFE8;stroke:#5F5E5A;stroke-width:.5}g.cgr>text.th{fill:#2C2C2A}g.cgr>text.ts{fill:#5F5E5A}
+g.cte>rect{fill:#E1F5EE;stroke:#0F6E56;stroke-width:.5}g.cte>text.th{fill:#04342C}g.cte>text.ts{fill:#0F6E56}
+g.cbl>rect{fill:#E6F1FB;stroke:#185FA5;stroke-width:.5}g.cbl>text.th{fill:#042C53}g.cbl>text.ts{fill:#185FA5}
+g.cpu>rect{fill:#EEEDFE;stroke:#534AB7;stroke-width:.5}g.cpu>text.th{fill:#26215C}g.cpu>text.ts{fill:#534AB7}
+g.cam>rect{fill:#FAEEDA;stroke:#854F0B;stroke-width:.5}g.cam>text.th{fill:#412402}g.cam>text.ts{fill:#854F0B}
+g.nd{cursor:pointer}g.nd:hover>rect{opacity:.85}
+
+/* ── SVG 컬러 그룹 (다크) ── */
+@media(prefers-color-scheme:dark){
+  g.cgr>rect{fill:#444441;stroke:#B4B2A9}g.cgr>text.th{fill:#D3D1C7}g.cgr>text.ts{fill:#B4B2A9}
+  g.cte>rect{fill:#085041;stroke:#5DCAA5}g.cte>text.th{fill:#9FE1CB}g.cte>text.ts{fill:#5DCAA5}
+  g.cbl>rect{fill:#0C447C;stroke:#85B7EB}g.cbl>text.th{fill:#B5D4F4}g.cbl>text.ts{fill:#85B7EB}
+  g.cpu>rect{fill:#3C3489;stroke:#AFA9EC}g.cpu>text.th{fill:#CECBF6}g.cpu>text.ts{fill:#AFA9EC}
+  g.cam>rect{fill:#633806;stroke:#EF9F27}g.cam>text.th{fill:#FAC775}g.cam>text.ts{fill:#EF9F27}
+}
+
+/* ── 인터랙티브 스테퍼 ── */
+.sbtns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.sbtn{padding:6px 14px;font-size:13px;font-weight:500;border:.5px solid var(--bd2);border-radius:20px;cursor:pointer;background:var(--bg2);color:var(--text);transition:all .15s;font-family:var(--sans)}
+.sbtn:hover:not(.sact){background:var(--bg3)}
+.spanel{display:none}.spanel.son{display:block}
+.shead{padding-bottom:12px;margin-bottom:14px;border-bottom:.5px solid var(--bd)}
+.stag{font-size:18px;font-weight:500;line-height:1.3;margin-bottom:3px}
+.sapi{display:inline-block;font-size:11px;padding:2px 8px;border-radius:4px;background:var(--bg3);border:.5px solid var(--bd2);color:var(--text2);margin-top:4px;font-family:var(--mono)}
+.plist{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
+.pitem{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg2);border:.5px solid var(--bd);border-radius:var(--r)}
+.pnum{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0;color:#fff;margin-top:1px}
+.ptxt{font-size:13px;color:var(--text);line-height:1.5;font-weight:500}
+.psub{font-size:11px;color:var(--text2);margin-top:3px;font-family:var(--mono);line-height:1.5;word-break:break-all}
+.snote{margin-top:10px;padding:9px 12px;border-left:2px solid var(--bd2);font-size:12px;color:var(--text2);line-height:1.6;background:var(--bg2);border-radius:0 var(--r) var(--r) 0}
+.prog{display:flex;align-items:center;gap:6px;margin-bottom:14px}
+.pdot{width:7px;height:7px;border-radius:50%;background:var(--bd2);transition:all .15s;flex-shrink:0}
+.pline{flex:1;height:.5px;background:var(--bd)}
+.doc-footer{margin-top:36px;padding-top:14px;border-top:.5px solid var(--bd);font-size:12px;color:var(--text2)}
+
+/* ── 인쇄 ── */
+@media print{
+  body{background:#fff;color:#000}
+  .sbtn,.prog{display:none!important}
+  .spanel{display:block!important}
+  .card{border:1px solid #ccc;break-inside:avoid;margin-bottom:16px}
+  .pitem{background:#f9f9f9;border:1px solid #eee}
+  .snote{border-left:2px solid #ccc;background:#f9f9f9}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- 헤더 -->
+<div class="doc-header">
+  <div class="doc-title">A1·B1 생체인증 시스템 — 구조 및 인증 흐름</div>
+  <div class="doc-meta">
+    <span class="badge">biometric-auth-lib</span>
+    <span class="badge">HMAC-SHA256 / ECDSA</span>
+    <span class="badge">Spring Boot · Android Java 11</span>
+    <span style="color:var(--text2)">biometric-auth-server/docs</span>
+  </div>
+</div>
+
+<!-- 섹션 1: 구조 다이어그램 -->
+<div class="sec">
+  <div class="sec-title">1 — 시스템 구조</div>
+  <div class="card">
+    <svg width="100%" viewBox="0 0 680 418" role="img">
+      <title>A1·B1 생체인증 시스템 구조</title>
+      <desc>Android biometric-lib와 B1 서버 구조, 5단계 인증 흐름 요약</desc>
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+      <!-- Android -->
+      <rect class="abg" x="16" y="44" width="278" height="202" rx="16"/>
+      <text class="th" x="155" y="65" text-anchor="middle" dominant-baseline="central">Android (Java 11)</text>
+      <rect class="sub" x="34" y="80" width="242" height="54" rx="8"/>
+      <text class="th" x="155" y="100" text-anchor="middle" dominant-baseline="central">android-biometric-lib</text>
+      <text class="ts" x="155" y="118" text-anchor="middle" dominant-baseline="central">AAR 라이브러리</text>
+      <line class="al" x1="155" y1="134" x2="155" y2="152" marker-end="url(#ar)"/>
+      <text class="ts" x="167" y="145" dominant-baseline="central">lib 호출</text>
+      <rect class="sub" x="34" y="154" width="242" height="54" rx="8"/>
+      <text class="th" x="155" y="174" text-anchor="middle" dominant-baseline="central">android-mis-app</text>
+      <text class="ts" x="155" y="192" text-anchor="middle" dominant-baseline="central">데모 앱 (lib 호출)</text>
+      <text class="ts" x="155" y="230" text-anchor="middle" dominant-baseline="central">갤럭시 탭 6–10</text>
+      <!-- Server -->
+      <rect class="sbg" x="390" y="44" width="274" height="202" rx="16"/>
+      <text class="th" x="527" y="65" text-anchor="middle" dominant-baseline="central">Server (Java 21)</text>
+      <rect class="sub" x="408" y="80" width="238" height="54" rx="8"/>
+      <text class="th" x="527" y="100" text-anchor="middle" dominant-baseline="central">biometric-auth-server</text>
+      <text class="ts" x="527" y="118" text-anchor="middle" dominant-baseline="central">챌린지·검증·실패정책</text>
+      <line class="al" x1="527" y1="134" x2="527" y2="152" marker-end="url(#ar)"/>
+      <text class="ts" x="539" y="145" dominant-baseline="central">JWT 요청</text>
+      <rect class="sub" x="408" y="154" width="238" height="54" rx="8"/>
+      <text class="th" x="527" y="174" text-anchor="middle" dominant-baseline="central">jwt-token-server</text>
+      <text class="ts" x="527" y="192" text-anchor="middle" dominant-baseline="central">JWT 발급 전용</text>
+      <text class="ts" x="527" y="230" text-anchor="middle" dominant-baseline="central">Spring Boot · In-Memory DB</text>
+      <!-- Middle arrows -->
+      <text class="ts" x="342" y="96" text-anchor="middle" dominant-baseline="central">등록·챌린지·토큰</text>
+      <line class="al" x1="297" y1="108" x2="388" y2="108" marker-end="url(#ar)"/>
+      <line class="al" x1="388" y1="126" x2="297" y2="126" marker-end="url(#ar)"/>
+      <!-- Flow area -->
+      <rect class="fbg" x="16" y="260" width="648" height="142" rx="14"/>
+      <text class="th" x="340" y="278" text-anchor="middle" dominant-baseline="central">전체 인증 흐름 요약</text>
+      <!-- Flow box 1 -->
+      <g class="cgr nd"><rect x="38" y="294" width="110" height="70" rx="8"/><text class="th" x="93" y="318" text-anchor="middle" dominant-baseline="central">① 등록</text><text class="ts" x="93" y="343" text-anchor="middle" dominant-baseline="central">Keystore 키 생성</text></g>
+      <line class="al" x1="148" y1="329" x2="160" y2="329" marker-end="url(#ar)"/>
+      <!-- Flow box 2 -->
+      <g class="cte nd"><rect x="160" y="294" width="110" height="70" rx="8"/><text class="th" x="215" y="318" text-anchor="middle" dominant-baseline="central">② 챌린지</text><text class="ts" x="215" y="343" text-anchor="middle" dominant-baseline="central">server_challenge</text></g>
+      <line class="al" x1="270" y1="329" x2="282" y2="329" marker-end="url(#ar)"/>
+      <!-- Flow box 3 -->
+      <g class="cbl nd"><rect x="282" y="294" width="110" height="70" rx="8"/><text class="th" x="337" y="318" text-anchor="middle" dominant-baseline="central">③ 안면인식</text><text class="ts" x="337" y="343" text-anchor="middle" dominant-baseline="central">HMAC 서명</text></g>
+      <line class="al" x1="392" y1="329" x2="404" y2="329" marker-end="url(#ar)"/>
+      <!-- Flow box 4 -->
+      <g class="cpu nd"><rect x="404" y="294" width="110" height="70" rx="8"/><text class="th" x="459" y="318" text-anchor="middle" dominant-baseline="central">④ 검증</text><text class="ts" x="459" y="343" text-anchor="middle" dominant-baseline="central">4단계 HMAC 검증</text></g>
+      <line class="al" x1="514" y1="329" x2="526" y2="329" marker-end="url(#ar)"/>
+      <!-- Flow box 5 -->
+      <g class="cam nd"><rect x="526" y="294" width="110" height="70" rx="8"/><text class="th" x="581" y="318" text-anchor="middle" dominant-baseline="central">⑤ JWT 발급</text><text class="ts" x="581" y="343" text-anchor="middle" dominant-baseline="central">access+refresh</text></g>
+    </svg>
+  </div>
+</div>
+
+<!-- 섹션 2: 단계별 세부 프로세스 -->
+<div class="sec">
+  <div class="sec-title">2 — 단계별 인증 흐름</div>
+  <div class="card">
+    <div class="sbtns" id="sn"></div>
+    <div class="prog" id="pg"></div>
+    <div id="sp"></div>
+  </div>
+</div>
+
+<div class="doc-footer">biometric-auth-server/docs &nbsp;·&nbsp; A1·B1 생체인증 시스템 기술 문서</div>
+</div>
+
+<script>
+const SD=[
+{n:'① 등록',t:'Keystore 키 생성 및 디바이스 등록',a:'POST /biometric/register',c:'#5F5E5A',
+p:[
+{t:'Android Keystore에 키 생성 요청',s:'KeyGenerator(HMAC-SHA256) — StrongBox 또는 TEE 내부 생성, 키 원본 앱·서버 모두 접근 불가'},
+{t:'deviceId(UUID) 및 userId 앱 내 저장',s:'TokenStorage(SharedPreferences) — setUserId() 호출 후 startFaceLogin() 순서 보장 필요'},
+{t:'서버에 등록 요청 전송',s:'{ deviceId, userId, publicKey, enrolledAt }'},
+{t:'서버: 디바이스 중복 여부 확인',s:'DeviceStore.existsByDeviceId() → 이미 존재 시 409 ALREADY_REGISTERED'},
+{t:'biometric_device 테이블에 ACTIVE 상태로 INSERT',s:'status=ACTIVE, publicKeyBase64, enrolledAt, updatedAt, fail_count=0 저장'},
+{t:'등록 완료 → 챌린지 단계 진입 가능',s:'response: { status: "REGISTERED" }'},
+],note:'키가 이미 등록된 경우 409 반환. 기기 변경 또는 생체 데이터 재등록 시 POST /biometric/renew-key를 통해 갱신.'},
+{n:'② 챌린지',t:'서버 챌린지 발급',a:'POST /biometric/challenge',c:'#0F6E56',
+p:[
+{t:'앱 → 서버: 챌린지 요청',s:'{ deviceId, userId, clientNonce(앱 생성 랜덤값), timestamp }'},
+{t:'서버: 디바이스 존재 및 상태 검증',s:'DeviceStore.findByDeviceId() → LOCKED: 423 / KEY_INVALIDATED: 409 반환'},
+{t:'ChallengeService.generateChallenge()',s:'SecureRandom 32바이트 → HexFormat → 64자 serverChallengeHex 생성'},
+{t:'ChallengeService.createSession()',s:'sessionId = UUID(하이픈 제거), expireAt = now + SESSION_TTL_SECONDS'},
+{t:'biometric_session 테이블에 세션 저장',s:'sessionId / serverChallengeHex / clientNonce / deviceId / userId / expireAt / used=0'},
+{t:'응답 반환 → 앱이 서명 재료로 사용',s:'response: { sessionId, serverChallenge, expireAtEpochMillis }'},
+],note:'SESSION_TTL_SECONDS(AuthConstants) 이내에 verify 완료 필수. 만료 후 verify 시도 시 SESSION_EXPIRED 반환.'},
+{n:'③ 안면인식',t:'BiometricPrompt 인증 + 서명 생성',a:'기기 내부 처리 (서버 통신 없음)',c:'#185FA5',
+p:[
+{t:'BiometricPrompt.authenticate() 호출',s:'CryptoObject에 Keystore MAC 객체 바인딩 — 인증 성공 시에만 키 잠금 해제'},
+{t:'시스템 UI에 안면인식 다이얼로그 표시',s:'생체 원본 데이터는 Secure Enclave 처리 — 앱·서버 모두 접근 불가'},
+{t:'안면인식 성공 → Keystore 키 잠금 해제',s:'실패 시 onAuthenticationFailed() 콜백 → 앱 내 재시도 횟수 누적'},
+{t:'서명 페이로드 조합',s:'"serverChallenge:clientNonce:deviceId:timestamp" — 서버 EcdsaVerifier와 동일 형식 필수'},
+{t:'HMAC-SHA256 서명 수행 (Keystore 내부 연산)',s:'서명 결과 → Base64 인코딩 → ecSignatureBase64 필드'},
+{t:'서명 완료 → verify 단계 자동 진입',s:'AuthCallback 내부에서 서버 검증 요청 자동 전송'},
+],note:'BiometricPrompt 자체 일시잠금(기기 정책)과 서버측 FailurePolicyService 잠금은 독립적으로 동작.'},
+{n:'④ 검증',t:'서버 4단계 서명 검증',a:'POST /biometric/verify',c:'#534AB7',
+p:[
+{t:'[1단계] 타임스탬프 허용 범위 확인',s:'|now - timestamp| ≤ TIMESTAMP_TOLERANCE_MS → 초과 시 TIMESTAMP_OUT_OF_RANGE'},
+{t:'[2단계] clientNonce 재사용 여부 확인',s:'NonceStore.isUsed() → biometric_nonce PK 조회 → 중복 시 NONCE_REPLAY'},
+{t:'[3단계] 세션 유효성 확인',s:'SessionStore.findBySessionId() → 만료(expireAt 초과) 또는 used=1이면 SESSION_EXPIRED'},
+{t:'[4단계] 서명 검증',s:'Signature.getInstance("SHA256withECDSA") — 동일 페이로드 재조합 후 공개키로 서명 비교'},
+{t:'검증 실패 시 fail_count 누적 및 잠금 처리',s:'fail_count >= maxRetryBeforeLockout → DeviceStatus=LOCKED / 미만: 횟수만 증가'},
+{t:'검증 성공 시 nonce·세션 소비 후 JWT 발급',s:'NonceStore.markUsed() + SessionStore.markUsed() → JwtTokenService.issueTokenForBiometric()'},
+],note:'VerificationResult 6종: SUCCESS / SESSION_EXPIRED / TIMESTAMP_OUT_OF_RANGE / NONCE_REPLAY / MISSING_SIGNATURE / INVALID_SIGNATURE'},
+{n:'⑤ JWT 발급',t:'Access + Refresh 토큰 발급',a:'jwt-token-server 내부 처리',c:'#854F0B',
+p:[
+{t:'biometric-auth-server → jwt-token-server 토큰 발급 요청',s:'EcdsaVerifier.verify() = SUCCESS 확인 후 내부 서비스 호출'},
+{t:'Claims 구성',s:'{ sub: userId, device_id: deviceId, user_id: userId, iat: now, exp: now+TTL }'},
+{t:'Access Token 생성 (단기)',s:'Jwts.builder().signWith(secretKey).compact() — 만료: 30분 (팀 정책에 따름)'},
+{t:'Refresh Token 생성 (장기)',s:'만료: 7일 — Refresh로 재발급 시 생체 재인증 불필요'},
+{t:'{ accessToken, refreshToken, expiresIn } 응답 반환',s:'JwtTokenPair DTO로 전달 → biometric-auth-server → 앱'},
+{t:'앱: 토큰 저장 → 이후 API 호출에 사용',s:'TokenStorage 저장 / Authorization: Bearer {accessToken} 헤더 첨부'},
+],note:'lib의 JwtTokenPair는 보관용 DTO만 제공, 발급 로직은 jwt-token-server 담당. B2에서는 issueTokenForBiometric() 신규 메서드로 동일 역할 수행.'},
+];
+
+const sn=document.getElementById('sn');
+const pg=document.getElementById('pg');
+const sp=document.getElementById('sp');
+
+SD.forEach((s,i)=>{
+  const b=document.createElement('button');
+  b.className='sbtn'+(i===0?' sact':'');
+  b.textContent=s.n;
+  if(i===0)b.style.cssText=`background:${s.c};border-color:transparent;color:#fff`;
+  b.onclick=()=>{
+    document.querySelectorAll('.sbtn').forEach((x,j)=>{
+      x.classList.toggle('sact',j===i);
+      x.style.cssText=j===i?`background:${SD[j].c};border-color:transparent;color:#fff`:'';
+    });
+    document.querySelectorAll('.pdot').forEach((x,j)=>{
+      x.style.background=j===i?s.c:'var(--bd2)';
+      x.style.transform=j===i?'scale(1.5)':'scale(1)';
+    });
+    document.querySelectorAll('.spanel').forEach((x,j)=>x.classList.toggle('son',j===i));
+  };
+  sn.appendChild(b);
+  const dot=document.createElement('div');dot.className='pdot';
+  if(i===0){dot.style.background=s.c;dot.style.transform='scale(1.5)';}
+  pg.appendChild(dot);
+  if(i<SD.length-1){const l=document.createElement('div');l.className='pline';pg.appendChild(l);}
+  const panel=document.createElement('div');
+  panel.className='spanel'+(i===0?' son':'');
+  const procs=s.p.map((p,j)=>`<li class="pitem"><div class="pnum" style="background:${s.c}">${j+1}</div><div style="flex:1"><div class="ptxt">${p.t}</div><div class="psub">${p.s}</div></div></li>`).join('');
+  panel.innerHTML=`<div class="shead"><div class="stag" style="color:${s.c}">${s.n}&nbsp;&nbsp;${s.t}</div><span class="sapi">${s.a}</span></div><ul class="plist">${procs}</ul><div class="snote">${s.note}</div>`;
+  sp.appendChild(panel);
+});
+</script>
+</body>
+</html>
