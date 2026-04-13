@@ -1267,6 +1267,164 @@ spring:
 
 ## STEP 10. B2 CASE별 응답 처리 명세
 
+## 전체 CASE 목록
+
+### 인증 흐름 전체 구조
+
+```
+앱 진입 (기기 상태 조회)
+ ├─ CASE 1  : 미등록 기기 → 등록 화면
+ ├─ CASE 2  : ACTIVE → 로그인 화면
+ ├─ CASE 9  : LOCKED(서버) → ID/PW 잠금 해제
+ └─ CASE 10 : KEY_INVALIDATED(기기 상태) → 키 갱신 다이얼로그
+
+로그인 화면 (BiometricAuthManager.authenticate)
+ ├─ CASE 7  : 안면인식 미등록 → 설정 유도 다이얼로그
+ ├─ CASE 8  : 생체인식 HW 불가 → 오류 메시지
+ ├─ CASE 5  : 로컬 잠금 진행 중 → 카운트다운
+ ├─ CASE 4  : 인증 실패 (재시도) → 실패 횟수 표시
+ ├─ CASE 3  : SESSION_EXPIRED → 자동 재시도
+ ├─ CASE 6  : INVALID_SIGNATURE 3회 → 자동 키 재발급
+ ├─ CASE 10 : KEY_INVALIDATED(서버 감지) → 키 갱신 다이얼로그
+ └─ CASE 11 : ACCOUNT_LOCKED → ID/PW 잠금 해제 UI
+
+사용자 변경
+ └─ CASE 12 : 담당자 변경 → PIN 인증 → 서버/로컬 삭제 → 등록 화면
+```
+
+---
+
+### CASE 1 — 신규(미등록) 기기
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `DEVICE_NOT_FOUND` |
+| **발생 조건** | 앱 최초 실행 또는 서버에 기기 등록 정보 없음 |
+| **호출 흐름** | `AuthApiClient.getUserId(deviceId)` → HTTP 404 → `DeviceNotFoundException` 발생 |
+| **A2 대응** | 등록 화면(`RegisterActivity` 대응 화면)으로 이동. `deviceId`(ANDROID_ID)를 Intent Extra로 전달 |
+
+---
+
+### CASE 2 — 등록 완료 기기 (ACTIVE)
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `ACTIVE` |
+| **발생 조건** | 서버 기기 상태 = `"ACTIVE"` |
+| **호출 흐름** | `getUserId()` → 응답 `status = "ACTIVE"` → `tokenStorage.saveRegistration()` → 로그인 화면 이동 |
+| **A2 대응** | 로컬 등록 플래그 저장 후 안면인식 로그인 화면으로 라우팅 |
+
+---
+
+### CASE 3 — 챌린지 세션 만료 (SESSION_EXPIRED) 자동 재시도
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `SESSION_EXPIRED` |
+| **발생 조건** | 챌린지 발급 후 60초 이내 서명 미완료 → 서버가 `SESSION_EXPIRED` 반환 |
+| **호출 흐름** | `requestToken()` → `TokenVerificationException("SESSION_EXPIRED")` → `sessionRetryCount < 2` 이면 `onSessionRetrying()` 콜백 → Challenge 재요청 → BiometricPrompt 재실행 |
+| **A2 대응** | `onSessionRetrying(retryCount, maxRetry)` 수신 시 "재시도 중..." 메시지 표시. 2회 초과 시 `onError(SESSION_EXPIRED)` |
+
+---
+
+### CASE 4 — 안면인식 실패 (재시도 가능)
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `BIOMETRIC_AUTH_FAILED` |
+| **발생 조건** | `BiometricPrompt.onAuthenticationFailed()` 호출 (얼굴 불일치, 잠금 임계 미도달) |
+| **호출 흐름** | `onAuthenticationFailed()` → `failurePolicyManager.recordFailure()` → `onRetry(failureCount)` 콜백 |
+| **A2 대응** | 실패 횟수 UI 표시 ("N회 실패 / 최대 5회") |
+
+---
+
+### CASE 5 — 로컬 잠금 (일시적)
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `LOCAL_LOCKOUT` |
+| **발생 조건** | 인증 실패 횟수 ≥ 서버 정책 `maxRetryBeforeLockout` → `isLocallyLocked()` = true |
+| **호출 흐름** | `onAuthenticationFailed()` → `isLocallyLocked()` 체크 → `onLockedOut(remainingSeconds)` 콜백 |
+| **A2 대응** | 카운트다운 타이머 UI 표시. 시간 경과 후 자동 재시도 활성화 |
+
+---
+
+### CASE 6 — INVALID_SIGNATURE 자동 키 재발급
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `INVALID_SIGNATURE` → 자동 `KEY_RENEWAL` |
+| **발생 조건** | 서버가 `INVALID_SIGNATURE` 3회 연속 반환 (`invalidSignatureCount >= 3`) |
+| **호출 흐름** | `TokenVerificationException("INVALID_SIGNATURE")` → 카운터 증가 → 3회 도달 시 `KeyRenewalHandler.renewAndRetry()` → 새 EC 키쌍 생성 → 서버 공개키 갱신 → BiometricPrompt 재실행 |
+| **A2 대응** | 자동 처리 (별도 UI 불필요). BiometricPrompt가 자동 재표시됨 |
+
+---
+
+### CASE 7 — 안면인식 미등록
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `BIOMETRIC_NONE_ENROLLED` |
+| **발생 조건** | `canAuthenticate(BIOMETRIC_WEAK)` = `BIOMETRIC_ERROR_NONE_ENROLLED` |
+| **호출 흐름** | `authenticate()` → `canAuthenticate()` 체크 → `onError(BIOMETRIC_NONE_ENROLLED)` 콜백 |
+| **A2 대응** | "안면인식 미등록" 다이얼로그 → "설정으로 이동" 버튼으로 생체인식 설정 화면 유도 |
+
+---
+
+### CASE 8 — 생체인식 하드웨어 불가
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `BIOMETRIC_HW_UNAVAILABLE` |
+| **발생 조건** | `canAuthenticate()` 결과가 `BIOMETRIC_SUCCESS`도 `NONE_ENROLLED`도 아닌 경우, 또는 API < 28 |
+| **호출 흐름** | `authenticate()` → `onError(BIOMETRIC_HW_UNAVAILABLE)` 콜백 |
+| **A2 대응** | "생체인식 기능 사용 불가" 오류 메시지 표시 |
+
+---
+
+### CASE 9 — 서버 잠금 (LOCKED)
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `LOCKED` |
+| **발생 조건** | 서버 기기 상태 = `"LOCKED"` (관리자 잠금 또는 서버 측 다중 실패) |
+| **호출 흐름** | `getUserId()` → `status = "LOCKED"` → ID/PW 잠금 해제 UI 표시 → `AuthApiClient.unlockDevice(deviceId)` 호출 |
+| **A2 대응** | ID/PW 입력 폼 표시. 인증 성공 후 `unlockDevice()` 호출 → 등록 플래그 저장 → 로그인 화면 이동 |
+
+---
+
+### CASE 10 — Keystore 키 무효화 (KEY_INVALIDATED)
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `KEY_INVALIDATED` |
+| **발생 조건** | ① 서버 기기 상태 = `"KEY_INVALIDATED"` (기기 상태 조회 시) ② 로그인 시 서버 409 KEY_INVALIDATED ③ 로컬 `KeyPermanentlyInvalidatedException` |
+| **호출 흐름** | `onError(KEY_INVALIDATED)` → "보안키 재설정" 다이얼로그 → `biometricAuthManager.startRenewal()` → `KeyRenewalHandler.renewAndRetry()` → 키 재발급 → BiometricPrompt 재실행 |
+| **A2 대응** | AlertDialog 표시 필수. 확인 시 `startRenewal()` 호출. 자동 복구 흐름 |
+
+---
+
+### CASE 11 — 계정 잠금 (ACCOUNT_LOCKED)
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `ACCOUNT_LOCKED` |
+| **발생 조건** | 인증 실패 횟수 ≥ 서버 정책 `accountLockThreshold` → 서버 `lockAccount()` 호출 완료 |
+| **호출 흐름** | `onAuthenticationFailed()` → `shouldRequestAccountLock()` = true → `authApiClient.lockAccount()` → `onAccountLocked()` 콜백 |
+| **A2 대응** | ID/PW 입력 UI 표시 (안면인식 버튼 숨김). ID/PW 인증 성공 후 `unlockDevice()` 호출 |
+
+---
+
+### CASE 12 — 사용자 변경 (담당자 변경)
+
+| 항목 | 내용 |
+|------|------|
+| **상태명** | `USER_CHANGE` |
+| **발생 조건** | 담당자 변경 버튼 클릭 |
+| **호출 흐름** | 확인 다이얼로그 → `userChangeHandler.verifyDeviceCredential()` → PIN/패턴 인증 → `onVerified()` → `userChangeHandler.executeChange()` → 서버 `unregisterDevice()` → 로컬 키 삭제 → `tokenStorage.clearAll()` → `onChangeCompleted()` → 등록 화면 이동 |
+| **A2 대응** | 버튼 클릭 → AlertDialog → PIN 인증 → 서버/로컬 초기화 → 등록 화면 |
+
+
 ```text
 ┌──────────────────────────────────────────────────────────┐
 │ 신규 생성 파일: (선택) .../BiometricApiExceptionHandler.java │
